@@ -1,6 +1,9 @@
-import { For } from 'solid-js'
+import { For, lazy, Suspense, createSignal } from 'solid-js'
 import { Link, useNavigate, useParams } from '@tanstack/solid-router'
 import { Plus, SatelliteDish, Settings, Users } from 'lucide-solid'
+import { Dialog } from '../../../shared/Dialog'
+
+const SettingsContent = lazy(() => import('./SettingsDialog'))
 
 // Placeholder workspace ids until bots/chats are backed by the database (M2).
 type Bot = {
@@ -83,6 +86,7 @@ export function Navigation() {
   const navigate = useNavigate()
   const params = useParams({ strict: false })
   const activeId = () => params().id
+  const [settingsOpen, setSettingsOpen] = createSignal(false)
 
   // Clicking the already-open workspace deselects it and returns to the dashboard.
   const handleSelect = (id: string, e: MouseEvent) => {
@@ -168,11 +172,35 @@ export function Navigation() {
       </div>
 
       <div class="border-t border-stone-200 p-3">
-        <button class="mb-1 flex w-full cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-stone-600 hover:bg-stone-200">
+        <button
+          class="mb-1 flex w-full cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-stone-600 hover:bg-stone-200"
+          onClick={() => setSettingsOpen(true)}
+        >
           <Settings class="h-4 w-4 text-stone-400" />
           Settings
         </button>
       </div>
+
+      <Dialog
+        open={settingsOpen()}
+        onClose={() => setSettingsOpen(false)}
+        title="Settings"
+        description="Hosts, models, and workspace defaults."
+        class="max-w-xl"
+        closeOnBackdrop={false}
+      >
+        <Suspense
+          fallback={
+            <div class="space-y-2">
+              <div class="h-5 w-40 animate-pulse rounded bg-stone-100" />
+              <div class="h-12 animate-pulse rounded-xl bg-stone-100" />
+              <div class="h-12 animate-pulse rounded-xl bg-stone-100" />
+            </div>
+          }
+        >
+          <SettingsContent />
+        </Suspense>
+      </Dialog>
     </aside>
   )
 }
