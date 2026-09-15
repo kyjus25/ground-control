@@ -5,20 +5,32 @@
   "type": "module",
   "description": "Mission control for your personal AI crew.",
   "scripts": {
-    "dev": "vite dev",
+    "dev": "bun --bun vite dev",
     "build": "vite build && tsc --noEmit",
     "preview": "vite preview",
-    "start": "node .output/server/index.mjs",
-    "check": "tsc --noEmit"
+    "start": "bun .output/server/index.mjs",
+    "check": "tsc --noEmit",
+    "db:up": "docker compose up -d db",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@tanstack/solid-devtools": "^0.8.12",
+    "@tanstack/solid-form": "^1.33.5",
     "@tanstack/solid-router": "^1.170.34",
+    "@tanstack/solid-router-devtools": "^1.167.2",
     "@tanstack/solid-start": "^1.168.52",
+    "drizzle-orm": "^0.45.2",
     "lucide-solid": "^1.46.0",
-    "solid-js": "^1.9.15"
+    "postgres": "^3.4.9",
+    "solid-js": "^1.9.15",
+    "valibot": "^1.5.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "@types/bun": "^1.4.2",
+    "drizzle-kit": "^0.31.10",
     "nitro": "3.0.260903-beta",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",

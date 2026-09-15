@@ -1,12 +1,10 @@
 import { createFileRoute } from '@tanstack/solid-router'
-import {
-  AlertTriangle,
-  Bot,
-  Clock,
-  Gauge,
-  Globe,
-  ShieldQuestion,
-} from 'lucide-solid'
+import AlertTriangle from 'lucide-solid/icons/alert-triangle'
+import Bot from 'lucide-solid/icons/bot'
+import Clock from 'lucide-solid/icons/clock'
+import Gauge from 'lucide-solid/icons/gauge'
+import Globe from 'lucide-solid/icons/globe'
+import ShieldQuestionMark from 'lucide-solid/icons/shield-question-mark'
 import type { JSX } from 'solid-js'
 
 type IconComponent = (props: { class?: string }) => JSX.Element
@@ -112,7 +110,7 @@ function ApprovalCard(props: { title: string; detail: string }) {
   return (
     <div class="flex items-center gap-3 rounded-xl border border-stone-200 bg-white p-4">
       <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-600">
-        <ShieldQuestion class="h-4 w-4" />
+        <ShieldQuestionMark class="h-4 w-4" />
       </span>
       <div class="min-w-0 flex-1">
         <div class="text-sm font-medium">{props.title}</div>

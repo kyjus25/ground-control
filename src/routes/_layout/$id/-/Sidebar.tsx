@@ -1,4 +1,5 @@
-import { Plus, Pin } from 'lucide-solid'
+import Pin from 'lucide-solid/icons/pin'
+import Plus from 'lucide-solid/icons/plus'
 
 // Workspace right rail — always open per PRD §4. Sections: browser session
 // activity, pinned messages, and jobs targeting this workspace.

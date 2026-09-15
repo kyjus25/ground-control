@@ -1,6 +1,23 @@
-import { ArrowUp, Download, Globe, Paperclip, Plus, RotateCcw, Search } from 'lucide-solid'
+import { createEffect } from 'solid-js'
+import { useParams } from '@tanstack/solid-router'
+import ArrowUp from 'lucide-solid/icons/arrow-up'
+import Download from 'lucide-solid/icons/download'
+import Globe from 'lucide-solid/icons/globe'
+import Paperclip from 'lucide-solid/icons/paperclip'
+import Plus from 'lucide-solid/icons/plus'
+import RotateCcw from 'lucide-solid/icons/rotate-ccw'
+import Search from 'lucide-solid/icons/search'
 
 export function Thread() {
+  let textareaRef: HTMLTextAreaElement | undefined
+  const params = useParams({ strict: false })
+
+  // Opening (or switching) a workspace focuses the composer.
+  createEffect(() => {
+    params().id
+    textareaRef?.focus()
+  })
+
   return (
     <main class="flex min-w-0 flex-1 flex-col">
       <header class="flex h-14 shrink-0 items-center gap-3 border-b border-stone-200 px-6">
@@ -147,6 +164,7 @@ export function Thread() {
           </div>
           <div class="flex items-end gap-2">
             <textarea
+              ref={textareaRef}
               rows="1"
               placeholder="Message the crew… type @ to mention a bot"
               class="flex-1 resize-none bg-transparent py-2 text-sm text-stone-600 placeholder-stone-400 focus:outline-none"

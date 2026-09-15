@@ -32,7 +32,7 @@ The design language is light, soft, minimal, and elegant: warm paper-white conte
 | Styling | Tailwind CSS v4 (stock palette only — stone scale for the warm neutrals; no custom theme color overrides) |
 
 Guiding principles:
-- Single-node first. SQLite over a client/server DB until multi-node is actually needed.
+- Single-node first, with Postgres running in Docker Compose from day one (see §8).
 - Providers are pluggable: API providers (OpenAI, Anthropic, Google, OpenRouter, etc.) and local runtimes (Ollama) side by side.
 - Everything event-driven internally so bot-to-bot messaging and cron share one message path.
 
@@ -72,7 +72,7 @@ The primary entity. A bot has:
 Every bot has its own persistent memory file.
 
 - Per-bot long-term memory: facts, preferences, lessons, running context the bot chooses to keep.
-- Stored as a structured markdown file in the bot's workspace on disk (mirrors the memory-file pattern used by agent frameworks), indexed into SQLite for retrieval.
+- Stored as a structured markdown file in the bot's workspace on disk (mirrors the memory-file pattern used by agent frameworks), indexed into Postgres for retrieval.
 - Memory is scoped: a bot's private memory is never visible to other bots unless the bot explicitly shares content into a chat or a shared workspace asset.
 - Bots manage their own memory through a tool (read/append/edit), with the UI offering a memory viewer/editor per bot for human oversight.
 
@@ -176,7 +176,7 @@ assets       (workspace_uuid, path, uploaded_by, created_at)
 
 ## 6. Build Order
 
-1. **M1 — Foundation:** Docker Compose skeleton, Bun server, SQLite schema, SolidJS + TanStack Start shell, theme config
+1. **M1 — Foundation:** Docker Compose skeleton (Postgres), Bun server, Postgres schema (Drizzle), SolidJS + TanStack Start shell, theme config
 2. **M2 — Hosts & Bots:** host CRUD, bot CRUD with identity picker, provider adapters via TanStack AI
 3. **M3 — Chat:** 1:1 user-bot chat, streaming, then group chat with @mentions and reply-depth rules
 4. **M4 — Bot memory:** memory files, read/append tools, memory viewer UI

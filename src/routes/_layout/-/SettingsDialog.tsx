@@ -1,5 +1,8 @@
-import { Server } from 'lucide-solid'
+import { useNavigate } from '@tanstack/solid-router'
+import { Dialog } from '../../../shared/Dialog'
+import Server from 'lucide-solid/icons/server'
 import type { Host } from '../../../types/host'
+import { logout } from '../../../server/auth'
 
 // Placeholder settings panel — host management lands in M2.
 const hosts: Host[] = [
@@ -17,9 +20,23 @@ const hosts: Host[] = [
   },
 ]
 
-export default function SettingsContent() {
+// Lazily loaded: everything here (Dialog + content) fetches on first open.
+export default function SettingsDialog(props: { onClose: () => void }) {
+  const navigate = useNavigate()
+  const signOut = async () => {
+    await logout()
+    await navigate({ to: '/login' })
+  }
+
   return (
-    <div class="space-y-6">
+    <Dialog
+      open
+      onClose={props.onClose}
+      title="Settings"
+      description="Hosts, models, and workspace defaults."
+      class="max-w-xl"
+      closeOnBackdrop={false}
+    >
       <section>
         <h3 class="mb-2 text-[13px] text-stone-400">Hosts</h3>
         <div class="divide-y divide-stone-200 rounded-xl border border-stone-200">
@@ -45,6 +62,15 @@ export default function SettingsContent() {
         Hosts, model assignments, budgets, and skills management land in M2. Everything here is a
         placeholder for now.
       </p>
-    </div>
+
+      <div class="border-t border-stone-200 pt-4">
+        <button
+          class="cursor-pointer rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-100"
+          onClick={signOut}
+        >
+          Sign out
+        </button>
+      </div>
+    </Dialog>
   )
 }

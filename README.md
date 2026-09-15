@@ -20,13 +20,18 @@ SolidJS + TanStack Start · TanStack AI · Bun · PostgreSQL (Drizzle) · Docker
 
 ## Status
 
-M1 foundation started — SolidJS + TanStack Start (SSR-ready) + Tailwind shell scaffolded. See [PRD.md](PRD.md) for the full product requirements document.
+M1 foundation complete — Docker Compose (Postgres), Drizzle schema + migrations, auth (login/signup with sessions), and the SolidJS + TanStack Start page shell (dashboard, thread, login). See [PRD.md](PRD.md) for the full product requirements document.
 
 ## Getting started
 
 ```sh
 bun install
-bun run dev      # start the dev server
-bun run build    # production build
-bun run check    # typecheck
+bun run db:up      # start Postgres (docker compose)
+bun run db:migrate # apply schema migrations
+bun run dev        # start the dev server
+bun run build      # production build
+bun run start      # serve the production build
+bun run check      # typecheck
 ```
+
+Signup (account creation) is gated behind the `ENABLE_SIGNUP` flag in `.env`.

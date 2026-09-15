@@ -8,7 +8,12 @@ Guidance for AI agents working in this repository. Product source of truth is
 - SolidJS + TanStack Start (Vite + Nitro, SSR enabled) — not plain Vite SPA
 - TanStack Router, file-based routing
 - Tailwind CSS v4 via `@tailwindcss/vite` — **stock palette only**
-- Icons: `lucide-solid` (named imports; check `node_modules/lucide-solid/dist/types/icons/` for availability)
+- Icons: `lucide-solid`, imported **per icon** —
+  `import Plus from 'lucide-solid/icons/plus'`. Never import from the
+  `lucide-solid` barrel: it pulls in every icon. Note the module names use
+  current lucide naming (`triangle-alert`, `shield-question-mark`), and each
+  module is a **default** export. Check
+  `node_modules/lucide-solid/dist/esm/icons/` for availability.
 - Runtime/package manager: Bun
 
 ## Commands
@@ -31,11 +36,33 @@ bun run start    # serve .output/server/index.mjs
   in a `-` folder next to their closest route
   (e.g. `routes/_layout/-/`, `routes/_layout/$id/-/`).
 - `src/shared/` is only for components used by **more than one route**.
-- `src/types/` holds domain types (`Bot`, `Host`, …). Both routes/components and
-  future server code import from here — keep these shapes UI-agnostic where
-  possible so they can describe the API.
+- `src/types/` holds domain types (`Bot`, `Host`, …) **and** API input
+  validation schemas (valibot, e.g. `auth-schemas.ts`). Validation schemas are
+  used on both ends — passed as server-function `.validator()` (runs client and
+  server side) and imported by pages for field-level errors. Keep these shapes
+  UI-agnostic so they can describe the API.
 - **No barrel files** (`index.ts` re-exports). Import from the specific file:
   `import type { Bot } from '../../types/bot'`.
+
+## Server & database
+
+- Postgres runs via `docker compose up -d db` (host port **5433** — 5432 is
+  taken on this machine). `DATABASE_URL` lives in `.env` (committed; dev-only
+  credentials), auto-loaded by `bun run`.
+- Drizzle: schema in `src/server/db/schema.ts`, migrations in `drizzle/`
+  (committed). After schema changes: `bun run db:generate` then
+  `bun run db:migrate`. `bun run db:studio` opens Drizzle Studio.
+- Server-only code lives in `src/server/` — the route generator never scans it.
+  Never import server modules from client components.
+- Backend surface = TanStack server functions (`createServerFn` from
+  `@tanstack/solid-start`, POST + `.validator()`), defined in `src/server/*`.
+  Cookies via `getCookie`/`setCookie` from `@tanstack/solid-start/server`.
+- Env flags are read server-side from `process.env` (Bun aliases this as
+  `Bun.env`); e.g. `ENABLE_SIGNUP=true` gates account creation.
+- Password hashing uses `bcryptjs` — `Bun.password` is not available because
+  the Nitro server runs on Node.
+- Route guards: `_layout/route.tsx` `beforeLoad` calls `getSessionUser` and
+  redirects to `/login` when signed out; login redirects back when signed in.
 - `src/routes/routeTree.gen.ts` is generated — never edit or commit it.
 - SSR is on: guard `window`/`document` usage in components.
 

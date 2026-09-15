@@ -1,11 +1,13 @@
-import { For, lazy, Suspense, createSignal } from 'solid-js'
+import { For, Show, Suspense, lazy, createSignal } from 'solid-js'
 import { Link, useNavigate, useParams } from '@tanstack/solid-router'
-import { Plus, SatelliteDish, Settings, Users } from 'lucide-solid'
-import { Dialog } from '../../../shared/Dialog'
+import Plus from 'lucide-solid/icons/plus'
+import SatelliteDish from 'lucide-solid/icons/satellite-dish'
+import Settings from 'lucide-solid/icons/settings'
+import Users from 'lucide-solid/icons/users'
 import type { BotGroup } from '../../../types/bot'
 import type { GroupChat } from '../../../types/group-chat'
 
-const SettingsContent = lazy(() => import('./SettingsDialog'))
+const SettingsDialog = lazy(() => import('./SettingsDialog'))
 
 // Placeholder workspace ids until bots/chats are backed by the database (M2).
 const botGroups: BotGroup[] = [
@@ -171,26 +173,11 @@ export function Navigation() {
         </button>
       </div>
 
-      <Dialog
-        open={settingsOpen()}
-        onClose={() => setSettingsOpen(false)}
-        title="Settings"
-        description="Hosts, models, and workspace defaults."
-        class="max-w-xl"
-        closeOnBackdrop={false}
-      >
-        <Suspense
-          fallback={
-            <div class="space-y-2">
-              <div class="h-5 w-40 animate-pulse rounded bg-stone-100" />
-              <div class="h-12 animate-pulse rounded-xl bg-stone-100" />
-              <div class="h-12 animate-pulse rounded-xl bg-stone-100" />
-            </div>
-          }
-        >
-          <SettingsContent />
+      <Show when={settingsOpen()}>
+        <Suspense fallback={null}>
+          <SettingsDialog onClose={() => setSettingsOpen(false)} />
         </Suspense>
-      </Dialog>
+      </Show>
     </aside>
   )
 }

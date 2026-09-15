@@ -1,5 +1,11 @@
 /// <reference types="vite/client" />
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/solid-router'
+import {
+  HeadContent,
+  Outlet,
+  Scripts,
+  createRootRoute,
+} from '@tanstack/solid-router'
+import { Suspense, lazy } from 'solid-js'
 import { HydrationScript } from 'solid-js/web'
 import type * as Solid from 'solid-js'
 import styleCss from '../../style.css?url'
@@ -20,8 +26,27 @@ export const Route = createRootRoute({
       { rel: 'icon', href: favicon },
     ],
   }),
+  // Devtools live inside the router tree (this component), not in the
+  // document shell, so the router context reaches them.
+  component: RootComponent,
   shellComponent: RootDocument,
 })
+
+function RootComponent() {
+  return (
+    <>
+      <Outlet />
+      {import.meta.env.DEV && (
+        <Suspense fallback={null}>
+          <Devtools />
+        </Suspense>
+      )}
+    </>
+  )
+}
+
+// Lazily loaded: devtools code never ships in the initial page load.
+const Devtools = lazy(() => import('./-/Devtools'))
 
 function RootDocument({ children }: { children: Solid.JSX.Element }) {
   return (
