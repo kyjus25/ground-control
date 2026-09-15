@@ -1,0 +1,13 @@
+@import 'tailwindcss';
+
+body {
+  @apply bg-stone-50 text-stone-900 font-sans antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 3px;
+}

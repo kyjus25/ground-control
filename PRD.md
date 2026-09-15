@@ -11,7 +11,7 @@
 
 Ground Control is a self-hosted platform for running a personal crew of AI bots. Each bot has a persistent identity (name, emoji, color, shape), a soul, skills, and its own LLM + provider. Bots live in group chats where the user @mentions them, and — critically — bots can message each other, both in group threads and in direct bot-to-bot DMs, without the user in the loop. Bots also run scheduled jobs and can browse the web with their own browser.
 
-The design language is light, soft, minimal, and elegant: warm paper-white content areas, sand-tinted sidebars, muted earthy bot identity colors, Lucide line icons, a satellite mark as the logo. Explicitly not a dark-purple-gradient "AI startup" look.
+The design language is light, soft, minimal, and elegant: warm paper-white content areas, sand-tinted sidebars, muted earthy bot identity colors, Lucide line icons, a satellite dish as the logo. Explicitly not a dark-purple-gradient "AI startup" look.
 
 **One-liner:** Mission control for your personal AI crew.
 
@@ -21,7 +21,7 @@ The design language is light, soft, minimal, and elegant: warm paper-white conte
 
 | Layer | Choice |
 |---|---|
-| Frontend | SolidJS + Vite (Vite+) |
+| Frontend | SolidJS + TanStack Start (Vite + Nitro, SSR-ready) |
 | AI plumbing | TanStack AI |
 | Data fetching | TanStack Query (where needed beyond TanStack AI primitives) |
 | Backend/runtime | Bun |
@@ -29,7 +29,7 @@ The design language is light, soft, minimal, and elegant: warm paper-white conte
 | Deployment | Docker Compose |
 | Browser automation | Playwright (bundled for bot browser sessions) |
 | Icons | Lucide |
-| Styling | Tailwind CSS (shared theme config across mockup and app) |
+| Styling | Tailwind CSS v4 (stock palette only — stone scale for the warm neutrals; no custom theme color overrides) |
 
 Guiding principles:
 - Single-node first. SQLite over a client/server DB until multi-node is actually needed.
@@ -130,14 +130,14 @@ Bots get their own browser via bundled Playwright.
 
 ## 4. UI Structure (from approved mockup)
 
-**Left pane (sand-tinted `#f3f2ec`)**
-- Ground Control wordmark + satellite logo badge
+**Left pane (sand-tinted, Tailwind `stone-100`)**
+- Ground Control wordmark + satellite-dish logo badge
 - Bots grouped by category (sentence-case labels, no all-caps)
 - Group Chats section beneath bots
 - Settings pinned at the bottom
 - List rows have small gaps; active row is a flat white card (no hover effects, no pointer cursor)
 
-**Center (paper-white `#fafaf8`)**
+**Center (paper-white, Tailwind `stone-50`)**
 - Chat header: title + overlapping member avatar cluster (+ dashed add button), search/export icons
 - Messages: no bubbles — avatar, name, timestamp, clean text. Tool traces (sources browsed, retries) as a subtle line under the message
 - Composer centered, @mention chips, attach button, round send button
@@ -174,7 +174,7 @@ assets       (workspace_uuid, path, uploaded_by, created_at)
 
 ## 6. Build Order
 
-1. **M1 — Foundation:** Docker Compose skeleton, Bun server, SQLite schema, SolidJS + Vite + TanStack shell, theme config
+1. **M1 — Foundation:** Docker Compose skeleton, Bun server, SQLite schema, SolidJS + TanStack Start shell, theme config
 2. **M2 — Hosts & Bots:** host CRUD, bot CRUD with identity picker, provider adapters via TanStack AI
 3. **M3 — Chat:** 1:1 user-bot chat, streaming, then group chat with @mentions and reply-depth rules
 4. **M4 — Bot memory:** memory files, read/append tools, memory viewer UI

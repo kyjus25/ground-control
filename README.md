@@ -16,8 +16,17 @@ Ground Control is a self-hosted platform for running a personal crew of AI bots.
 
 ## Stack
 
-SolidJS + Vite · TanStack AI · Bun · PostgreSQL (Drizzle) · Docker Compose · Playwright · Tailwind · Lucide
+SolidJS + TanStack Start · TanStack AI · Bun · PostgreSQL (Drizzle) · Docker Compose · Playwright · Tailwind · Lucide
 
 ## Status
 
-Pre-implementation. See [PRD.md](PRD.md) for the full product requirements document.
+M1 foundation started — SolidJS + TanStack Start (SSR-ready) + Tailwind shell scaffolded. See [PRD.md](PRD.md) for the full product requirements document.
+
+## Getting started
+
+```sh
+bun install
+bun run dev      # start the dev server
+bun run build    # production build
+bun run check    # typecheck
+```
