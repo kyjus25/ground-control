@@ -1,5 +1,5 @@
 import { Outlet, createFileRoute } from '@tanstack/solid-router'
-import { Navigation } from '../components/dashboard/Navigation'
+import { Navigation } from './-/Navigation'
 
 // Shared shell for all authenticated pages: the Navigation is ever-present.
 export const Route = createFileRoute('/_layout')({

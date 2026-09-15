@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/solid-router'
-import { Sidebar } from '../components/dashboard/Sidebar'
-import { Thread } from '../components/dashboard/Thread'
+import { Sidebar } from './-/Sidebar'
+import { Thread } from './-/Thread'
 
 export const Route = createFileRoute('/_layout/$id')({
   head: () => ({
