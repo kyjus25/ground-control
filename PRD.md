@@ -111,9 +111,10 @@ Bots can run scheduled jobs.
 Bots get their own browser via bundled Playwright.
 
 - Skill-granted: not every bot gets a browser.
-- Sessions are per-workspace (isolated context/cookies per bot or chat).
-- Browser activity is logged into the chat's Activity feed with URLs fetched.
-- Human-in-the-loop checkpoint option for form submits / destructive navigation (configurable per bot).
+- One shared browser window per workspace: all agents in a thread work in the same session (context/cookies), so they can see each other's tabs and hand off mid-task. Sessions are isolated across workspaces.
+- Headless under the hood; the session is streamed as a live view into the thread's right sidebar so the user can watch agents work in real time.
+- Browser activity (URLs fetched, actions taken) is logged to the workspace event stream.
+- Human-in-the-loop checkpoint option for form submits / destructive navigation (configurable per bot); pending checkpoints surface in the sidebar browser view and on the dashboard.
 
 ### 3.9 Slash Commands
 - `/goal <text>` — set the current workspace's standing goal/objective. Visible in the right sidebar; bots can read and reference it.
@@ -143,7 +144,8 @@ Bots get their own browser via bundled Playwright.
 - Composer centered, @mention chips, attach button, round send button
 
 **Right sidebar (sand-tinted, always open)**
-- Activity: live event feed for the current chat (replies, browsed URLs, searches, mentions)
+- Browser: live embedded view of the workspace's shared browser window (headless session streamed in; all agents in the thread work in it)
+- Pinned: messages pinned from the thread for quick reference
 - Jobs: crons targeting this chat, with initiator and schedule
 
 **Bot editor (to be mocked)**

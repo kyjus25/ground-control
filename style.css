@@ -4,6 +4,48 @@ body {
   @apply bg-stone-50 text-stone-900 font-sans antialiased;
 }
 
+/* Bot avatar shapes (geometry only, no colors) */
+@utility shape-hex {
+  clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
+}
+@utility shape-tri {
+  clip-path: polygon(50% 8%, 95% 90%, 5% 90%);
+}
+
+/* Message entrance + typing indicator */
+.bot-msg {
+  animation: fade-up 0.25s ease-out;
+}
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.typing-dot {
+  animation: blink 1.2s infinite;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes blink {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 6px;
 }
