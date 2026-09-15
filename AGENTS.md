@@ -31,6 +31,11 @@ bun run start    # serve .output/server/index.mjs
   in a `-` folder next to their closest route
   (e.g. `routes/_layout/-/`, `routes/_layout/$id/-/`).
 - `src/shared/` is only for components used by **more than one route**.
+- `src/types/` holds domain types (`Bot`, `Host`, …). Both routes/components and
+  future server code import from here — keep these shapes UI-agnostic where
+  possible so they can describe the API.
+- **No barrel files** (`index.ts` re-exports). Import from the specific file:
+  `import type { Bot } from '../../types/bot'`.
 - `src/routes/routeTree.gen.ts` is generated — never edit or commit it.
 - SSR is on: guard `window`/`document` usage in components.
 

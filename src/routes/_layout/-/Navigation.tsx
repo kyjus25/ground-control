@@ -2,22 +2,12 @@ import { For, lazy, Suspense, createSignal } from 'solid-js'
 import { Link, useNavigate, useParams } from '@tanstack/solid-router'
 import { Plus, SatelliteDish, Settings, Users } from 'lucide-solid'
 import { Dialog } from '../../../shared/Dialog'
+import type { BotGroup } from '../../../types/bot'
+import type { GroupChat } from '../../../types/group-chat'
 
 const SettingsContent = lazy(() => import('./SettingsDialog'))
 
 // Placeholder workspace ids until bots/chats are backed by the database (M2).
-type Bot = {
-  id: string
-  name: string
-  detail: string
-  emoji: string
-  avatarClass: string
-  dotClass: string
-  dimmed?: boolean
-}
-
-type BotGroup = { category: string; bots: Bot[] }
-
 const botGroups: BotGroup[] = [
   {
     category: 'Research',
@@ -69,7 +59,7 @@ const botGroups: BotGroup[] = [
   },
 ]
 
-const groupChats = [
+const groupChats: GroupChat[] = [
   {
     id: '6eb115b9-5394-4f8a-ba79-091b2210c8d3',
     name: 'Weekend Project Crew',

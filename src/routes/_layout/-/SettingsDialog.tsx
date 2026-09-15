@@ -1,7 +1,8 @@
 import { Server } from 'lucide-solid'
+import type { Host } from '../../../types/host'
 
 // Placeholder settings panel — host management lands in M2.
-const hosts = [
+const hosts: Host[] = [
   {
     name: 'atlas',
     kind: 'Cloud · us-east · 3 bots',
