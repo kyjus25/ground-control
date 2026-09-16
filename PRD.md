@@ -40,12 +40,14 @@ Guiding principles:
 
 ## 3. Core Concepts
 
-### 3.1 Hosts
-A host is a machine (or logical endpoint) that can run bots: a cloud box with API keys, a home server with Ollama, etc. Hosts are defined first; bots are assigned to a host. Once a bot is configured, its host is an implementation detail and is hidden from chat UI.
+### 3.1 Workspaces
+A workspace is a named directory that bots and threads operate on. It can live on the machine running the UI or on any remote machine running Ground Control (addressable by IP/host) — hence workspaces replace the old "hosts" idea. Workspaces are defined first; threads attach to one or many.
 
-- CRUD for hosts in Settings.
-- Health/status visible in Settings only (not in group chats).
-- A host reports: connected providers, loaded local models, active bot count.
+- CRUD for workspaces in Settings.
+- Attach/detach per thread from the right sidebar; a thread can access multiple workspaces.
+- A workspace carries a directory path plus the endpoint of the machine exposing it (null endpoint = the local machine).
+- Reachability/status visible in Settings only (not in group chats).
+- A workspace reports: available files/assets, attached thread count, last-sync status.
 
 ### 3.2 Bots
 The primary entity. A bot has:
@@ -60,13 +62,12 @@ The primary entity. A bot has:
 - Soul (personality / core character)
 - Instructions (system-level operating rules)
 - Skills (tool grants: web search, browser, file access, cron, memory write, etc.)
-- Model + provider assignment (any model available on its host)
+- Model + provider assignment (any model from the configured providers)
 - Fallback model (optional) — used on rate limit / failure
 
 **Runtime**
 - Memory file (see 3.3)
-- Workspace UUID (see 3.4)
-- Owner host
+- Owner user (per-user scoping, see 8)
 
 ### 3.3 Bot Memory (first-class)
 Every bot has its own persistent memory file.
@@ -76,13 +77,13 @@ Every bot has its own persistent memory file.
 - Memory is scoped: a bot's private memory is never visible to other bots unless the bot explicitly shares content into a chat or a shared workspace asset.
 - Bots manage their own memory through a tool (read/append/edit), with the UI offering a memory viewer/editor per bot for human oversight.
 
-### 3.4 Workspaces & Shared Assets
-Every workspace — a single bot or a group chat — is a UUID.
+### 3.4 Bot & Thread Storage (UUID folders)
+Every bot and every group chat has a UUID data folder on disk.
 
-- A workspace owns a folder structure on disk: `assets/`, `files/`, `jobs/`, plus its chat history and config.
-- A bot can access everything pertaining to itself (its own workspace) or any group chat it belongs to (that chat's workspace).
-- Group-chat workspaces provide the shared context layer: members can read/write shared documents, scratchpads, and task lists there. This is what makes multi-bot collaboration coherent rather than pure message ping-pong.
-- Bots do not get blanket access to other bots' private workspaces.
+- A data folder owns a folder structure on disk: `assets/`, `files/`, `jobs/`, plus its chat history and config. (Distinct from §3.1 workspace directories, which are external directories threads operate on.)
+- A bot can access everything pertaining to itself (its own folder) or any group chat it belongs to (that chat's folder).
+- Group-chat folders provide the shared context layer: members can read/write shared documents, scratchpads, and task lists there. This is what makes multi-bot collaboration coherent rather than pure message ping-pong.
+- Bots do not get blanket access to other bots' private folders.
 
 ### 3.5 Group Chats
 - User creates a chat, adds bots (members), and talks.
@@ -123,7 +124,7 @@ Bots get their own browser via bundled Playwright.
 - `/archive`, `/export` — housekeeping commands.
 
 ### 3.10 Budgets & Rate Controls
-- Per-bot and per-host token budgets (daily/monthly) with soft warnings and hard cutoffs.
+- Per-bot and per-provider token budgets (daily/monthly) with soft warnings and hard cutoffs.
 - Especially important for cron loops and bot-to-bot chains — a runaway job can't torch API credits overnight.
 - Budget status visible in Settings and optionally in Activity feed.
 
@@ -144,32 +145,34 @@ Bots get their own browser via bundled Playwright.
 - Composer centered, @mention chips, attach button, round send button
 
 **Right sidebar (sand-tinted, always open)**
-- Browser: live embedded view of the workspace's shared browser window (headless session streamed in; all agents in the thread work in it)
+- Workspaces: directories attached to this thread — attach/detach per thread
+- Browser: live embedded view of the thread's shared browser window (headless session streamed in; all agents in the thread work in it)
 - Pinned: messages pinned from the thread for quick reference
 - Jobs: crons targeting this chat, with initiator and schedule
 
 **Bot editor (to be mocked)**
-- Identity picker (emoji / shape / color), soul, instructions, skills toggles, model + host assignment, memory viewer
+- Identity picker (emoji / shape / color), soul, instructions, skills toggles, model assignment, memory viewer
 
 ---
 
 ## 5. Data Model (initial)
 
 ```
-hosts        (id, name, endpoint, provider_config, status)
-bots         (id, uuid, name, emoji, color, shape, avatar_path,
+workspaces   (id, user_id, name, path, endpoint, status)
+bots         (id, user_id, name, emoji, color, shape, avatar_path,
               category, soul, instructions, model_id, fallback_model_id,
-              host_id, skills_json, budget_json)
-group_chats  (uuid, name, created_by)
-chat_members (chat_uuid, bot_id | user)
+              skills_json, budget_json)
+group_chats  (id, user_id, name, created_by)
+chat_members (chat_id, bot_id | user)
+thread_workspaces (thread_id, workspace_id)
 messages     (id, workspace_uuid, sender_type, sender_id, content,
               reply_to, tool_trace_json, created_at)
 bot_dms      (from_bot_id, to_bot_id, workspace_uuid)
 jobs         (id, bot_id, initiator_type, initiator_id, target_workspace_uuid,
               schedule, task, enabled, last_run_at, last_status)
 memories     (bot_id, file_path, indexed_content, updated_at)
-workspaces   (uuid, kind: bot|chat, path)
-assets       (workspace_uuid, path, uploaded_by, created_at)
+data_folders (id, owner_uuid, kind: bot|chat, path)
+assets       (owner_uuid, path, uploaded_by, created_at)
 ```
 
 ---
@@ -177,10 +180,10 @@ assets       (workspace_uuid, path, uploaded_by, created_at)
 ## 6. Build Order
 
 1. **M1 — Foundation:** Docker Compose skeleton (Postgres), Bun server, Postgres schema (Drizzle), SolidJS + TanStack Start shell, theme config
-2. **M2 — Hosts & Bots:** host CRUD, bot CRUD with identity picker, provider adapters via TanStack AI
+2. **M2 — Workspaces & Bots:** workspace CRUD, bot CRUD with identity picker, provider adapters via TanStack AI
 3. **M3 — Chat:** 1:1 user-bot chat, streaming, then group chat with @mentions and reply-depth rules
 4. **M4 — Bot memory:** memory files, read/append tools, memory viewer UI
-5. **M5 — Workspaces:** UUID workspace folders, shared assets per chat
+5. **M5 — Bot & thread storage:** UUID data folders, shared assets per chat
 6. **M6 — Bot-to-bot:** DMs, message bus, observation/mute controls
 7. **M7 — Cron:** job scheduler, chat-initiated jobs, initiator + target tracking
 8. **M8 — Browser:** Playwright sessions per workspace, activity logging, checkpoints
@@ -192,7 +195,7 @@ assets       (workspace_uuid, path, uploaded_by, created_at)
 
 - Image generation (bots may call an external API skill later)
 - Voice / real-time audio
-- Multi-node orchestration (single-node only; hosts are remote endpoints)
+- Multi-node orchestration (single-node only; workspace endpoints are remote)
 - Public bot sharing/marketplace (bot export as JSON is a cheap later add)
 - Mobile app (mobile-first responsive web is enough)
 

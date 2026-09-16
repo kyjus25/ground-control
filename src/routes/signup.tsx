@@ -39,7 +39,8 @@ function Signup() {
       setPending(true)
       try {
         await signup({ data: value })
-        await navigate({ to: '/' })
+        // A new account has no bots — onboarding names the first one.
+        await navigate({ to: '/onboarding' })
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong')
       } finally {

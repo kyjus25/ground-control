@@ -16,8 +16,12 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@tanstack/solid-ai-devtools": "^0.2.71",
     "@tanstack/solid-devtools": "^0.8.12",
     "@tanstack/solid-form": "^1.33.5",
+    "@tanstack/solid-form-devtools": "^0.2.34",
+    "@tanstack/solid-query": "^5.102.8",
+    "@tanstack/solid-query-devtools": "^5.102.8",
     "@tanstack/solid-router": "^1.170.34",
     "@tanstack/solid-router-devtools": "^1.167.2",
     "@tanstack/solid-start": "^1.168.52",
@@ -29,6 +33,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/devtools-vite": "^0.8.5",
     "@types/bun": "^1.4.2",
     "drizzle-kit": "^0.31.10",
     "nitro": "3.0.260903-beta",

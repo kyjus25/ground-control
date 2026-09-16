@@ -1,4 +1,4 @@
-import { Show, createEffect, type JSX } from 'solid-js'
+import { Show, Suspense, createEffect, onCleanup, type JSX } from 'solid-js'
 import X from 'lucide-solid/icons/x'
 
 type DialogProps = {
@@ -22,6 +22,13 @@ export function Dialog(props: DialogProps) {
   createEffect(() => {
     if (props.open && !ref.open) ref.showModal()
     else if (!props.open && ref.open) ref.close()
+  })
+
+  // If the parent unmounts us while open, leave the top layer cleanly.
+  // Removing an open <dialog> from the DOM without close() corrupts the
+  // top layer — every later showModal then renders without overlay/centering.
+  onCleanup(() => {
+    if (ref.open) ref.close()
   })
 
   return (
@@ -51,7 +58,13 @@ export function Dialog(props: DialogProps) {
             <X class="h-4 w-4" />
           </button>
         </header>
-        <div class="max-h-[calc(85dvh-4.5rem)] overflow-y-auto px-6 py-5">{props.children}</div>
+        <div class="max-h-[calc(85dvh-4.5rem)] overflow-y-auto px-6 py-5">
+          {/* Boundary INSIDE the panel: if dialog content reads a query that is
+              (re)fetching, solid-query suspends its reader — without this the
+              suspension bubbles to the boundary above, which swaps out (and
+              thereby un-modalizes) the open <dialog> element itself. */}
+          <Suspense fallback={null}>{props.children}</Suspense>
+        </div>
       </Show>
     </dialog>
   )

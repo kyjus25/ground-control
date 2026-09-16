@@ -2,6 +2,7 @@ import { Show, createResource, createSignal } from 'solid-js'
 import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/solid-router'
 import { createForm } from '@tanstack/solid-form'
 import { getSignupEnabled, getSessionUser, login } from '../server/auth'
+import { listBots } from '../server/bots'
 import { AuthShell } from './-/AuthShell'
 import { SigninSchema } from '../types/auth-schemas'
 
@@ -37,7 +38,9 @@ function Login() {
       setPending(true)
       try {
         await login({ data: value })
-        await navigate({ to: '/' })
+        // Fresh accounts have no bots yet — start them in onboarding.
+        const bots = await listBots()
+        await navigate({ to: bots.length === 0 ? '/onboarding' : '/' })
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong')
       } finally {

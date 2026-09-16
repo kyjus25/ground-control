@@ -1,6 +1,6 @@
 {
-  "id": "06c9727b-357d-46ad-b8cc-79e3acb921d8",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "78e4e94d-f07a-4ecd-86d7-ba7dedc25f7f",
+  "prevId": "06c9727b-357d-46ad-b8cc-79e3acb921d8",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -259,19 +259,6 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "thread_workspaces_thread_id_group_chats_id_fk": {
-          "name": "thread_workspaces_thread_id_group_chats_id_fk",
-          "tableFrom": "thread_workspaces",
-          "tableTo": "group_chats",
-          "columnsFrom": [
-            "thread_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
         "thread_workspaces_workspace_id_workspaces_id_fk": {
           "name": "thread_workspaces_workspace_id_workspaces_id_fk",
           "tableFrom": "thread_workspaces",

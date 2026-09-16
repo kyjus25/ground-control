@@ -1,24 +1,24 @@
 import { TanStackDevtools } from '@tanstack/solid-devtools'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/solid-router-devtools'
-import { useRouter } from '@tanstack/solid-router'
+import { SolidQueryDevtoolsPanel } from '@tanstack/solid-query-devtools'
+import { formDevtoolsPlugin } from '@tanstack/solid-form-devtools'
+import { aiDevtoolsPlugin } from '@tanstack/solid-ai-devtools'
+import { useQueryClient } from '@tanstack/solid-query'
 
-// Dev-only. Loaded lazily so production bundles never include devtools code.
+// Dev-only unified devtools shell (@tanstack/solid-devtools) with one tab per
+// TanStack library. Requires the `devtools()` vite plugin (vite.config.ts).
 export default function Devtools() {
-  const router = useRouter()
+  const queryClient = useQueryClient()
   return (
     <TanStackDevtools
-      config={{ triggerMode: 'fixed', position: 'bottom-right' }}
       plugins={[
+        { name: 'TanStack Router', render: <TanStackRouterDevtoolsPanel /> },
         {
-          name: 'TanStack Router',
-          render: () => (
-            <TanStackRouterDevtoolsPanel
-              router={router}
-              isOpen={true}
-              style={{ height: '100%' }}
-            />
-          ),
+          name: 'TanStack Query',
+          render: <SolidQueryDevtoolsPanel client={queryClient} />,
         },
+        formDevtoolsPlugin(),
+        aiDevtoolsPlugin(),
       ]}
     />
   )

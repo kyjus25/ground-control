@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/solid-router'
+import { createFileRoute, redirect } from '@tanstack/solid-router'
 import AlertTriangle from 'lucide-solid/icons/alert-triangle'
 import Bot from 'lucide-solid/icons/bot'
 import Clock from 'lucide-solid/icons/clock'
@@ -6,6 +6,7 @@ import Gauge from 'lucide-solid/icons/gauge'
 import Globe from 'lucide-solid/icons/globe'
 import ShieldQuestionMark from 'lucide-solid/icons/shield-question-mark'
 import type { JSX } from 'solid-js'
+import { listBots } from '../../server/bots'
 
 type IconComponent = (props: { class?: string }) => JSX.Element
 
@@ -13,6 +14,12 @@ export const Route = createFileRoute('/_layout/')({
   head: () => ({
     meta: [{ title: 'Ground Control' }],
   }),
+  // First-run accounts have no crew yet — the dashboard is where that rule
+  // is enforced (login/signup and bot deletion route there directly).
+  beforeLoad: async () => {
+    const bots = await listBots()
+    if (bots.length === 0) throw redirect({ to: '/onboarding' })
+  },
   component: Dashboard,
 })
 

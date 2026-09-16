@@ -5,7 +5,8 @@ import {
   Scripts,
   createRootRoute,
 } from '@tanstack/solid-router'
-import { Suspense, lazy } from 'solid-js'
+import { QueryClient, QueryClientProvider } from '@tanstack/solid-query'
+import { Suspense, lazy, createSignal, onMount } from 'solid-js'
 import { HydrationScript } from 'solid-js/web'
 import type * as Solid from 'solid-js'
 import styleCss from '../../style.css?url'
@@ -33,15 +34,26 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      // One quick retry; the default 3-retry exponential backoff stalls
+      // failed queries for ~7s, which suspends anything reading them.
+      queries: { retry: 1 },
+    },
+  })
+  // Client-only mount: the devtools render nothing during SSR, and Solid
+  // hydration skips branches the server left empty — so wait for hydration.
+  const [mounted, setMounted] = createSignal(false)
+  onMount(() => setMounted(true))
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <Outlet />
-      {import.meta.env.DEV && (
+      {mounted() && import.meta.env.DEV && (
         <Suspense fallback={null}>
           <Devtools />
         </Suspense>
       )}
-    </>
+    </QueryClientProvider>
   )
 }
 

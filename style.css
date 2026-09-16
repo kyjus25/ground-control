@@ -11,6 +11,9 @@ body {
 @utility shape-tri {
   clip-path: polygon(50% 8%, 95% 90%, 5% 90%);
 }
+@utility shape-diamond {
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
 
 /* Message entrance + typing indicator */
 .bot-msg {
