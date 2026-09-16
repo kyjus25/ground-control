@@ -1,5 +1,5 @@
 import * as v from 'valibot'
-import { For, Show, createSignal } from 'solid-js'
+import { For, Show, createSignal, onMount } from 'solid-js'
 import { createMutation, useQueryClient } from '@tanstack/solid-query'
 import { useNavigate } from '@tanstack/solid-router'
 import Trash2 from 'lucide-solid/icons/trash-2'
@@ -80,6 +80,14 @@ export default function BotEditorForm(props: {
   }
   const [skills, setSkills] = createSignal<string[]>(initialSkills())
   const [tab, setTab] = createSignal<'identity' | 'avatar' | 'skills'>('identity')
+
+  onMount(() => {
+    if (!props.bot) {
+      setEmoji(EMOJIS[Math.floor(Math.random() * EMOJIS.length)])
+      setColor(COLOR_SWATCHES[Math.floor(Math.random() * COLOR_SWATCHES.length)].color)
+      setShape(SHAPES[Math.floor(Math.random() * SHAPES.length)].shape)
+    }
+  })
 
   const TABS: Array<{ id: 'identity' | 'avatar' | 'skills'; label: string }> = [
     { id: 'identity', label: 'Identity' },

@@ -6,35 +6,14 @@ import Plus from 'lucide-solid/icons/plus'
 import SatelliteDish from 'lucide-solid/icons/satellite-dish'
 import Settings from 'lucide-solid/icons/settings'
 import Users from 'lucide-solid/icons/users'
-import type { Bot, BotColor, BotShape } from '../../../types/bot'
+import { BotAvatar } from '../../../shared/BotAvatar'
+import type { Bot } from '../../../types/bot'
 import { listBots } from '../../../server/bots'
 import { listChats } from '../../../server/chats'
 
 const SettingsDialog = lazy(() => import('./SettingsDialog'))
 const BotEditorDialog = lazy(() => import('./BotEditorDialog'))
-
-const SHAPE_CLASS: Record<BotShape, string> = {
-  circle: 'rounded-full',
-  square: 'rounded-md',
-  hex: 'shape-hex',
-  triangle: 'shape-tri',
-  diamond: 'shape-diamond',
-}
-
-const COLOR_BG: Record<BotColor, string> = {
-  green: 'bg-green-100',
-  teal: 'bg-teal-100',
-  sky: 'bg-sky-100',
-  blue: 'bg-blue-100',
-  violet: 'bg-violet-100',
-  fuchsia: 'bg-fuchsia-100',
-  rose: 'bg-rose-100',
-  red: 'bg-red-100',
-  orange: 'bg-orange-100',
-  amber: 'bg-amber-100',
-  lime: 'bg-lime-100',
-  stone: 'bg-stone-100',
-}
+const CreateGroupChatDialog = lazy(() => import('./CreateGroupChatDialog'))
 
 export function Navigation(props: { onNavigate?: () => void } = {}) {
   const navigate = useNavigate()
@@ -49,6 +28,7 @@ export function Navigation(props: { onNavigate?: () => void } = {}) {
   const [settingsOpen, setSettingsOpen] = createSignal(false)
   const [editorOpen, setEditorOpen] = createSignal(false)
   const [editingBot, setEditingBot] = createSignal<Bot | null>(null)
+  const [groupDialogOpen, setGroupDialogOpen] = createSignal(false)
 
   // Clicking the already-open workspace deselects it and returns to the dashboard.
   const handleSelect = (id: string, e: MouseEvent) => {
@@ -114,8 +94,7 @@ export function Navigation(props: { onNavigate?: () => void } = {}) {
             <Plus class="h-3.5 w-3.5" />
           </button>
         </div>
-        <Show
-          when={!botsQuery.isPending}
+        <Suspense
           fallback={
             <div class="space-y-2 px-2.5 pt-2">
               <div class="h-10 animate-pulse rounded-lg bg-stone-200/60" />
@@ -141,11 +120,7 @@ export function Navigation(props: { onNavigate?: () => void } = {}) {
                       class={rowClass(bot.id)}
                       onClick={(e) => handleSelect(bot.id, e)}
                     >
-                      <div
-                        class={`flex h-8 w-8 shrink-0 items-center justify-center text-sm ${SHAPE_CLASS[bot.shape]} ${COLOR_BG[bot.color]}`}
-                      >
-                        {bot.emoji}
-                      </div>
+                      <BotAvatar bot={bot} class="h-8 w-8 text-sm" />
                       <div class="min-w-0">
                         <div class="truncate text-sm font-medium">{bot.name}</div>
                         <div class="truncate text-xs text-stone-400">{detail([bot.modelId])}</div>
@@ -175,12 +150,12 @@ export function Navigation(props: { onNavigate?: () => void } = {}) {
             <button
               class="cursor-pointer text-stone-400 hover:text-stone-900"
               title="New group chat"
+              onClick={() => setGroupDialogOpen(true)}
             >
               <Plus class="h-3.5 w-3.5" />
             </button>
           </div>
-          <Show
-            when={!chatsQuery.isLoading}
+          <Suspense
             fallback={<div class="h-10 animate-pulse rounded-lg bg-stone-200/60" />}
           >
             <For each={chatList()}>
@@ -197,13 +172,15 @@ export function Navigation(props: { onNavigate?: () => void } = {}) {
                   </div>
                   <div class="min-w-0">
                     <div class="truncate text-sm font-medium">{chat.name}</div>
-                    <div class="truncate text-xs text-stone-400">{chat.membersLabel}</div>
+                    <div class="truncate text-xs text-stone-400">
+                      {chat.members.map((m) => m.name).join(', ')}
+                    </div>
                   </div>
                 </Link>
               )}
             </For>
-          </Show>
-        </Show>
+          </Suspense>
+        </Suspense>
       </div>
 
       <div class="border-t border-stone-200 p-3">
@@ -225,6 +202,12 @@ export function Navigation(props: { onNavigate?: () => void } = {}) {
       <Show when={editorOpen()}>
         <Suspense fallback={null}>
           <BotEditorDialog bot={editingBot()} onClose={() => setEditorOpen(false)} />
+        </Suspense>
+      </Show>
+
+      <Show when={groupDialogOpen()}>
+        <Suspense fallback={null}>
+          <CreateGroupChatDialog bots={botList()} onClose={() => setGroupDialogOpen(false)} />
         </Suspense>
       </Show>
     </aside>

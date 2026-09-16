@@ -1,4 +1,14 @@
-import { pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import {
+  bigserial,
+  boolean,
+  index,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core'
 import { BOT_COLORS, BOT_SHAPES } from '../../types/bot'
 
 export const users = pgTable('users', {
@@ -79,3 +89,65 @@ export const groupChats = pgTable('group_chats', {
   membersLabel: text('members_label').notNull().default(''),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
+
+// Group chat membership (§3.5). The owning user is implicit via
+// group_chats.user_id; members are the bots that can be @mentioned.
+export const chatMembers = pgTable(
+  'chat_members',
+  {
+    chatId: uuid('chat_id')
+      .notNull()
+      .references(() => groupChats.id, { onDelete: 'cascade' }),
+    botId: uuid('bot_id')
+      .notNull()
+      .references(() => bots.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.chatId, t.botId] })],
+)
+
+// Thread messages. thread_id is the bot's id for 1:1 threads or the group
+// chat's id for group threads (same key space as thread_workspaces).
+// sender_bot_id is set when the sender is a bot.
+export const messages = pgTable(
+  'messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    threadId: uuid('thread_id').notNull(),
+    senderType: text('sender_type', { enum: ['user', 'bot'] }).notNull(),
+    senderBotId: uuid('sender_bot_id').references(() => bots.id, { onDelete: 'cascade' }),
+    content: text('content').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('messages_thread_created_idx').on(t.threadId, t.createdAt)],
+)
+
+// Delivery-durability log for streaming runs (PRD §8: stream + durable).
+// `runs` carries run lifecycle (open until the producer closes it); a stale
+// `updated_at` on an open run is treated as closed by readers — that is the
+// crashed-producer case. `run_events` stores each streamed chunk under a
+// per-run sequence so a reconnect replays exactly what was delivered.
+export const runs = pgTable('runs', {
+  id: text('id').primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  threadId: uuid('thread_id').notNull(),
+  open: boolean('open').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const runEvents = pgTable(
+  'run_events',
+  {
+    runId: text('run_id')
+      .notNull()
+      .references(() => runs.id, { onDelete: 'cascade' }),
+    seq: bigserial('seq', { mode: 'number' }).notNull(),
+    chunk: jsonb('chunk').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.runId, t.seq] })],
+)

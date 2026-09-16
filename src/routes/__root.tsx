@@ -48,7 +48,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
-      {mounted() && import.meta.env.DEV && (
+      {import.meta.env.DEV && mounted() && (
         <Suspense fallback={null}>
           <Devtools />
         </Suspense>
@@ -60,7 +60,7 @@ function RootComponent() {
 // Lazily loaded: devtools code never ships in the initial page load.
 const Devtools = lazy(() => import('./-/Devtools'))
 
-function RootDocument({ children }: { children: Solid.JSX.Element }) {
+function RootDocument(props: { children: Solid.JSX.Element }) {
   return (
     <html lang="en">
       <head>
@@ -68,7 +68,7 @@ function RootDocument({ children }: { children: Solid.JSX.Element }) {
       </head>
       <body>
         <HeadContent />
-        {children}
+        {props.children}
         <Scripts />
       </body>
     </html>

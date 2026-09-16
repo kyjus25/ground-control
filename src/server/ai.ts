@@ -5,18 +5,19 @@ import { and, eq } from 'drizzle-orm'
 import { db } from './db'
 import { bots } from './db/schema'
 import { getSessionUser } from './auth'
+import { systemPromptsFor } from './chat-helpers'
 import { DEFAULT_MODEL_ID, ZAI_MODELS, type ZaiModelId } from '../types/ai'
 
 // Z.AI speaks the OpenAI Chat Completions protocol, so TanStack AI's generic
 // compatible adapter covers it — only the base URL and key differ.
 const zai = openaiCompatible({
   name: 'zai',
-  baseURL: Bun.env.ZAI_BASE_URL || 'https://api.z.ai/api/paas/v4',
-  apiKey: Bun.env.ZAI_API_KEY || '',
+  baseURL: process.env.ZAI_BASE_URL || 'https://api.z.ai/api/paas/v4',
+  apiKey: process.env.ZAI_API_KEY || '',
   models: ZAI_MODELS.map((m) => m.id),
 })
 
-function adapterFor(modelId: string) {
+export function adapterFor(modelId: string) {
   const known = ZAI_MODELS.some((m) => m.id === modelId)
   if (!known) {
     throw new Error(`Unknown model "${modelId}" — pick one in the bot editor`)
@@ -25,7 +26,7 @@ function adapterFor(modelId: string) {
 }
 
 export const aiStatus = createServerFn({ method: 'GET' }).handler(() => ({
-  configured: Boolean(Bun.env.ZAI_API_KEY),
+  configured: Boolean(process.env.ZAI_API_KEY),
   models: ZAI_MODELS,
 }))
 
@@ -41,7 +42,7 @@ export const generateBotReply = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const user = await getSessionUser()
     if (!user) throw new Error('Unauthorized')
-    if (!Bun.env.ZAI_API_KEY) {
+    if (!process.env.ZAI_API_KEY) {
       throw new Error('ZAI_API_KEY is not set — add your key to .env')
     }
     const [bot] = await db
@@ -52,11 +53,12 @@ export const generateBotReply = createServerFn({ method: 'POST' })
     if (!bot.modelId) {
       throw new Error('This bot has no model assigned — pick one in the bot editor')
     }
-    const system = [bot.soul, bot.instructions].filter(Boolean).join('\n\n')
+    const roster = await db.select().from(bots).where(eq(bots.userId, user.id))
     const reply = await chat({
       adapter: adapterFor(bot.modelId),
       messages: data.messages,
-      ...(system ? { system } : {}),
+      systemPrompts: systemPromptsFor(bot, { name: bot.name, primaryBotId: bot.id, memberIds: [bot.id] }, roster),
+
       stream: false,
     })
     return { reply }

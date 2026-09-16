@@ -22,6 +22,34 @@
       "when": 1789530430535,
       "tag": "0002_smiling_northstar",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789531395909,
+      "tag": "0003_lowly_bushwacker",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789561660484,
+      "tag": "0004_purple_shiver_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789565313004,
+      "tag": "0005_salty_zombie",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789565332371,
+      "tag": "0006_shocking_daredevil",
+      "breakpoints": true
     }
   ]
 }

@@ -15,16 +15,16 @@ type DrawerProps = {
 // Tailwind can't build responsive variants dynamically, so predeclare the
 // per-breakpoint escape hatches that switch overlay mode back to inline.
 const INLINE_ROOT: Record<'md' | 'lg', string> = {
-  md: 'md:static md:z-auto md:block',
-  lg: 'lg:static lg:z-auto lg:block',
+  md: 'md:static md:z-auto md:block md:h-dvh',
+  lg: 'lg:static lg:z-auto lg:block lg:h-dvh',
 }
 const INLINE_BACKDROP: Record<'md' | 'lg', string> = {
   md: 'md:hidden',
   lg: 'lg:hidden',
 }
 const INLINE_PANEL: Record<'md' | 'lg', string> = {
-  md: 'md:static md:shadow-none',
-  lg: 'lg:static lg:shadow-none',
+  md: 'md:static md:h-dvh md:shadow-none',
+  lg: 'lg:static lg:h-dvh lg:shadow-none',
 }
 
 // Slide-in drawer for small screens. Unlike Dialog, children stay mounted;

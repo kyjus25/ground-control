@@ -33,11 +33,8 @@ function Layout() {
         <span class="text-[15px] font-medium tracking-tight">Ground Control</span>
       </div>
 
-      <div class="flex min-w-0 flex-1 pt-14 md:pt-0">
-        <Outlet />
-      </div>
-
-      {/* One Navigation instance: drawer below md, inline panel above. */}
+      {/* One Navigation instance: inline panel on desktop (first in flex order),
+          slide-in drawer on mobile. */}
       <Drawer
         side="left"
         inlineAt="md"
@@ -47,6 +44,10 @@ function Layout() {
       >
         <Navigation onNavigate={() => setNavOpen(false)} />
       </Drawer>
+
+      <div class="flex min-w-0 flex-1 pt-14 md:pt-0">
+        <Outlet />
+      </div>
     </div>
   )
 }
