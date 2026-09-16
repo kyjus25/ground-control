@@ -5,6 +5,7 @@ import {
   canResumeRun,
   contextFor,
   mentionedBots,
+  positiveIntEnv,
   runReplyChain,
   streamSpeakerReply,
   systemPromptsFor,
@@ -59,6 +60,21 @@ async function turn(thread: ChatThread, text: string, replies: Record<string, st
   await emit([{ type: EventType.RUN_FINISHED, runId: 'run', threadId: 'thread' }])
   return { calls, emitted, persisted, custom, messages: processor.getMessages() }
 }
+
+describe('chat loop-guard env parsing', () => {
+  test('positiveIntEnv: positive ints parsed; unset, garbage, zero and negatives fall back', () => {
+    const cases: Array<[string | undefined, number]> = [
+      ['5', 5], ['12', 12], ['  8  ', 8],
+      ['0', 7], ['-2', 7], ['abc', 7], ['2.7', 2],
+    ]
+    for (const [raw, expected] of cases) {
+      if (raw === undefined) delete process.env.GC_TEST_VALUE
+      else process.env.GC_TEST_VALUE = raw
+      expect(positiveIntEnv('GC_TEST_VALUE', 7)).toBe(expected)
+    }
+    delete process.env.GC_TEST_VALUE
+  })
+})
 
 describe('chat prompts and ownership', () => {
   test('direct and group prompts always include identity, SOUL, instructions and only owner roster', () => {
@@ -175,9 +191,13 @@ describe('reply routing and streaming attribution', () => {
       expect(benStarted.persisted).toHaveLength(1)
       expect(benStarted.persisted[0].content).toBe('Covering it.')
     } else {
+      // Scout (required) ignored the prompt and passed: its reply is dropped
+      // and the mic hands to Ben, whose reply is the turn's only message.
       expect(benStarted.calls.map((call) => call.speaker.id)).toEqual(['scout', 'ben'])
       expect(benStarted.messages).toHaveLength(1)
-      expect(benStarted.messages[0].metadata?.name).toBe('Scout')
+      expect(benStarted.messages[0].metadata?.name).toBe('Ben')
+      expect(benStarted.persisted).toHaveLength(1)
+      expect(benStarted.persisted[0].content).toBe('Covering it.')
     }
     const mentioned = await turn(group, '@Scout only you', { scout: 'On it.' })
     expect(mentioned.calls.map((call) => call.speaker.id)).toEqual(['scout'])

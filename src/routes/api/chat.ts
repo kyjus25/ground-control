@@ -12,7 +12,7 @@ import { bots, chatMembers, groupChats, messages, runs } from '../../server/db/s
 import { getSessionUser } from '../../server/auth'
 import { adapterFor } from '../../server/ai'
 import { pgStream } from '../../server/durability'
-import { canResumeRun, runReplyChain, streamSpeakerReply, type ChatThread } from '../../server/chat-helpers'
+import { canResumeRun, COOLDOWN_MS, runReplyChain, streamSpeakerReply, type ChatThread } from '../../server/chat-helpers'
 
 export const Route = createFileRoute('/api/chat')({
   server: {
@@ -80,6 +80,30 @@ export const Route = createFileRoute('/api/chat')({
         const lastUser = [...wireMessages].reverse().find((m) => m?.role === 'user')
         const newText = textOf(lastUser?.content)
         if (!newText.trim()) return new Response('No user message', { status: 400 })
+
+        // M3 loop guards (§3.5): one run at a time per thread, plus a
+        // per-thread cooldown between fresh user turns. Both fail closed.
+        const [activeRun] = await db
+          .select({ id: runs.id })
+          .from(runs)
+          .where(and(eq(runs.userId, userId), eq(runs.threadId, threadId), eq(runs.open, true)))
+          .limit(1)
+        if (activeRun) {
+          return Response.json({ error: 'A reply is already generating in this thread' }, { status: 409 })
+        }
+        const [lastUserMessage] = await db
+          .select({ createdAt: messages.createdAt })
+          .from(messages)
+          .where(and(eq(messages.userId, userId), eq(messages.threadId, threadId), eq(messages.senderType, 'user')))
+          .orderBy(desc(messages.createdAt))
+          .limit(1)
+        if (lastUserMessage && Date.now() - lastUserMessage.createdAt.getTime() < COOLDOWN_MS) {
+          const waitSeconds = Math.ceil((COOLDOWN_MS - (Date.now() - lastUserMessage.createdAt.getTime())) / 1000)
+          return Response.json(
+            { error: `Slow down — this thread is cooling down. Try again in ${waitSeconds}s.` },
+            { status: 429, headers: { 'Retry-After': String(waitSeconds) } },
+          )
+        }
 
         const registered = await db.transaction(async (tx) => {
           const inserted = await tx.insert(runs)

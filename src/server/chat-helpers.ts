@@ -1,5 +1,18 @@
 import { EventType, type ModelMessage, type StreamChunk } from '@tanstack/ai'
 
+// Chat loop-guard settings, overridable via .env (server-side only).
+// GC_REPLY_DEPTH: max bot-to-bot handoff hops per turn (default 3, §3.5).
+// GC_COOLDOWN_MS: minimum gap between user turns in one thread (default 3000).
+export const REPLY_DEPTH_CAP = positiveIntEnv('GC_REPLY_DEPTH', 3)
+export const COOLDOWN_MS = positiveIntEnv('GC_COOLDOWN_MS', 3000)
+
+export function positiveIntEnv(name: string, fallback: number): number {
+  const raw = process.env[name]
+  if (raw === undefined || raw.trim() === '') return fallback
+  const parsed = Number.parseInt(raw, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
 export type ChatBot = {
   id: string
   userId: string
@@ -56,7 +69,7 @@ export function systemPromptsFor(speaker: ChatBot, thread: ChatThread, roster: r
     `SOUL:\n${speaker.soul?.trim() || 'No SOUL configured.'}`,
     `Instructions:\n${speaker.instructions?.trim() || 'No additional instructions configured.'}`,
     `Available bots owned by this user:\n${available.map((bot) => `- @${bot.name} (bot ID: ${bot.id})${bot.id === speaker.id ? ' — you' : ''}${bot.modelId ? '' : ' — no model assigned; cannot reply'}`).join('\n')}`,
-    'To request help or hand off in any thread, @mention an available bot by its exact name in your reply and include the context and request for that bot. Do not invent available bots. Each bot answers at most once per turn, with handoffs limited to depth 3. Keep replies in character and reasonably concise.',
+    `To request help or hand off in any thread, @mention an available bot by its exact name in your reply and include the context and request for that bot. Do not invent available bots. Each bot answers at most once per turn, with handoffs limited to depth ${REPLY_DEPTH_CAP}. Keep replies in character and reasonably concise.`,
   ]
 }
 
@@ -121,7 +134,7 @@ export async function runReplyChain(options: {
       history.push({ senderType: 'bot', senderBotId: speaker.id, content: reply })
       senderNames.set(speaker.id, speaker.name)
     }
-    if (depth >= 3) continue
+    if (depth >= REPLY_DEPTH_CAP) continue
     for (const next of mentionedBots(reply, roster)) {
       const queued = queue.find((entry) => entry.bot.id === next.id)
       if (queued) queued.invited = false

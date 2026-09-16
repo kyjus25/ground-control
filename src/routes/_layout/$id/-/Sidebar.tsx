@@ -1,6 +1,9 @@
 import { For, Show, Suspense } from 'solid-js'
 import { createMutation, createQuery, useQueryClient } from '@tanstack/solid-query'
 import { useParams } from '@tanstack/solid-router'
+import CalendarClock from 'lucide-solid/icons/calendar-clock'
+import Folder from 'lucide-solid/icons/folder'
+import Globe from 'lucide-solid/icons/globe'
 import Plus from 'lucide-solid/icons/plus'
 import Pin from 'lucide-solid/icons/pin'
 import X from 'lucide-solid/icons/x'
@@ -38,7 +41,10 @@ export function Sidebar() {
       {/* Browser */}
       <div class="border-b border-stone-200 px-5 pt-6 pb-5">
         <div class="mb-3 flex items-center justify-between">
-          <h3 class="text-[13px] font-medium">Browser</h3>
+          <h3 class="flex items-center gap-1.5 text-[13px] font-medium">
+            <Globe class="h-3.5 w-3.5" />
+            Browser
+          </h3>
           <span class="flex items-center gap-1.5 text-xs text-stone-400">
             <span class="h-1.5 w-1.5 rounded-full bg-green-500" />
             live
@@ -53,7 +59,10 @@ export function Sidebar() {
       <Suspense fallback={<div class="border-b border-stone-200 px-5 pt-6 pb-5 text-xs text-stone-400">Loading workspaces…</div>}>
         <div class="border-b border-stone-200 px-5 pt-6 pb-5">
           <div class="mb-3 flex items-center justify-between">
-            <h3 class="text-[13px] font-medium">Workspaces</h3>
+            <h3 class="flex items-center gap-1.5 text-[13px] font-medium">
+              <Folder class="h-3.5 w-3.5" />
+              Workspaces
+            </h3>
             <span class="text-xs text-stone-400">{attached.data?.length ?? 0}</span>
           </div>
           <Show
@@ -138,7 +147,10 @@ export function Sidebar() {
       {/* Jobs */}
       <div class="px-5 py-5">
         <div class="mb-3 flex items-center justify-between">
-          <h3 class="text-[13px] font-medium">Jobs</h3>
+          <h3 class="flex items-center gap-1.5 text-[13px] font-medium">
+            <CalendarClock class="h-3.5 w-3.5" />
+            Jobs
+          </h3>
           <button class="cursor-pointer text-stone-400 hover:text-stone-900">
             <Plus class="h-3.5 w-3.5" />
           </button>

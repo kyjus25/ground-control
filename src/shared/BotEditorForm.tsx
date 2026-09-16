@@ -9,12 +9,17 @@ import { DEFAULT_MODEL_ID, ZAI_MODELS } from '../types/ai'
 import type { Bot, BotColor, BotShape } from '../types/bot'
 
 const EMOJIS = [
-  '🧭', '📚', '🔥', '🛠️', '🤖', '💡', '🌙', '⚖️', '🎯', '🧪', '✉️', '🗂️',
-  '📡', '🧠', '🐛', '🎨', '📈', '🔍', '🗺️', '🧩', '⚙️', '🚀', '🌱', '🐙',
+  '🧭', '📚', '🔥', '🛠️', '🤖', '💡', '🌙',
+  '⚖️', '🎯', '🧪', '✉️', '🗂️', '📡', '🧠',
+  '🐛', '🎨', '📈', '🔍', '🗺️', '🧩', '⚙️',
+  '🚀', '🌱', '🎓', '☀️', '📦', '📰', '📅',
+  '📝', '💻', '🎵', '🎮', '📷', '🏠', '🚗',
   // Fitness & training agents
   '🏋️', '💪', '🏃', '🧘', '🚴', '⚽',
   // Everyday-life agents: money, health, cooking, travel, shopping, pets
   '💰', '🩺', '🍳', '✈️', '🛒', '🐾',
+  // Reminders & entertainment
+  '⏰', '🎬',
 ]
 
 const COLOR_SWATCHES: Array<{ color: BotColor; class: string }> = [
@@ -194,7 +199,7 @@ export default function BotEditorForm(props: {
         <div class="space-y-4">
           <div>
             <p class="mb-2 text-[13px] text-stone-400">Emoji</p>
-            <div class="grid grid-cols-6 gap-1.5">
+            <div class="grid grid-cols-7 gap-1.5">
               <For each={EMOJIS}>
                 {(e) => (
                   <button
