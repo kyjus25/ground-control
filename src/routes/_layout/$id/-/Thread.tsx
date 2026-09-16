@@ -3,12 +3,13 @@ import { useParams } from '@tanstack/solid-router'
 import ArrowUp from 'lucide-solid/icons/arrow-up'
 import Download from 'lucide-solid/icons/download'
 import Globe from 'lucide-solid/icons/globe'
+import PanelRight from 'lucide-solid/icons/panel-right'
 import Paperclip from 'lucide-solid/icons/paperclip'
 import Plus from 'lucide-solid/icons/plus'
 import RotateCcw from 'lucide-solid/icons/rotate-ccw'
 import Search from 'lucide-solid/icons/search'
 
-export function Thread() {
+export function Thread(props: { onOpenRail?: () => void } = {}) {
   let textareaRef: HTMLTextAreaElement | undefined
   const params = useParams({ strict: false })
 
@@ -49,6 +50,13 @@ export function Thread() {
           </button>
         </div>
         <div class="ml-auto flex items-center gap-1 text-stone-400">
+          <button
+            class="cursor-pointer rounded-lg p-2 hover:bg-stone-200 hover:text-stone-900 lg:hidden"
+            title="Thread panel"
+            onClick={() => props.onOpenRail?.()}
+          >
+            <PanelRight class="h-4 w-4" />
+          </button>
           <button class="cursor-pointer rounded-lg p-2 hover:bg-stone-200 hover:text-stone-900" title="Search">
             <Search class="h-4 w-4" />
           </button>

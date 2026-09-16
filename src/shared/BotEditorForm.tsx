@@ -5,6 +5,7 @@ import { useNavigate } from '@tanstack/solid-router'
 import Trash2 from 'lucide-solid/icons/trash-2'
 import { createBot, updateBot, deleteBot } from '../server/bots'
 import { BotInputWithIdSchema, BotInputSchema } from '../types/bot-schemas'
+import { DEFAULT_MODEL_ID, ZAI_MODELS } from '../types/ai'
 import type { Bot, BotColor, BotShape } from '../types/bot'
 
 const EMOJIS = [
@@ -64,9 +65,9 @@ export default function BotEditorForm(props: {
   const [color, setColor] = createSignal<BotColor>(props.bot?.color ?? 'green')
   const [shape, setShape] = createSignal<BotShape>(props.bot?.shape ?? 'circle')
   const [category, setCategory] = createSignal(props.bot?.category ?? '')
-  const [modelId, setModelId] = createSignal(props.bot?.modelId ?? '')
-  const [soul, setSoul] = createSignal('')
-  const [instructions, setInstructions] = createSignal('')
+  const [modelId, setModelId] = createSignal(props.bot?.modelId ?? DEFAULT_MODEL_ID)
+  const [soul, setSoul] = createSignal(props.bot?.soul ?? '')
+  const [instructions, setInstructions] = createSignal(props.bot?.instructions ?? '')
   // New bots start with every skill enabled; existing bots show what's stored.
   const initialSkills = () => {
     if (!props.bot) return [...SKILL_OPTIONS]
@@ -78,11 +79,11 @@ export default function BotEditorForm(props: {
     }
   }
   const [skills, setSkills] = createSignal<string[]>(initialSkills())
-  const [tab, setTab] = createSignal<'avatar' | 'identity' | 'skills'>('avatar')
+  const [tab, setTab] = createSignal<'identity' | 'avatar' | 'skills'>('identity')
 
-  const TABS: Array<{ id: 'avatar' | 'identity' | 'skills'; label: string }> = [
-    { id: 'avatar', label: 'Avatar' },
+  const TABS: Array<{ id: 'identity' | 'avatar' | 'skills'; label: string }> = [
     { id: 'identity', label: 'Identity' },
+    { id: 'avatar', label: 'Avatar' },
     { id: 'skills', label: 'Skills' },
   ]
   const [error, setError] = createSignal<string | null>(null)
@@ -94,6 +95,8 @@ export default function BotEditorForm(props: {
       color: BotColor
       shape: BotShape
       category: string
+      soul: string
+      instructions: string
       modelId: string
       skills: string
     }) => {
@@ -133,6 +136,8 @@ export default function BotEditorForm(props: {
       color: color(),
       shape: shape(),
       category: category(),
+      soul: soul(),
+      instructions: instructions(),
       modelId: modelId(),
       skills: JSON.stringify(skills()),
     }
@@ -252,7 +257,7 @@ export default function BotEditorForm(props: {
               class="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm placeholder-stone-400 focus:border-stone-400 focus:outline-none"
             />
           </div>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label for="bot-category" class="mb-1.5 block text-[13px] font-medium text-stone-600">
                 Category
@@ -269,13 +274,17 @@ export default function BotEditorForm(props: {
               <label for="bot-model" class="mb-1.5 block text-[13px] font-medium text-stone-600">
                 Model
               </label>
-              <input
+              <select
                 id="bot-model"
                 value={modelId()}
-                onInput={(e) => setModelId(e.currentTarget.value)}
-                placeholder="gpt-6-mini"
-                class="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm placeholder-stone-400 focus:border-stone-400 focus:outline-none"
-              />
+                onChange={(e) => setModelId(e.currentTarget.value)}
+                class="w-full cursor-pointer rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-600 focus:border-stone-400 focus:outline-none"
+              >
+                <option value="">Not set</option>
+                <For each={ZAI_MODELS}>
+                  {(m) => <option value={m.id}>{m.label} · {m.hint}</option>}
+                </For>
+              </select>
             </div>
           </div>
           <div>

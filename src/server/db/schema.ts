@@ -64,7 +64,6 @@ export const bots = pgTable('bots', {
   soul: text('soul'),
   instructions: text('instructions'),
   modelId: text('model_id'),
-  fallbackModelId: text('fallback_model_id'),
   skills: text('skills').notNull().default('[]'),
   budget: text('budget').notNull().default('{}'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

@@ -182,7 +182,7 @@ assets       (owner_uuid, path, uploaded_by, created_at)
 1. **M1 — Foundation:** Docker Compose skeleton (Postgres), Bun server, Postgres schema (Drizzle), SolidJS + TanStack Start shell, theme config
 2. **M2 — Workspaces & Bots:** workspace CRUD, bot CRUD with identity picker, provider adapters via TanStack AI
 3. **M3 — Chat:** 1:1 user-bot chat, streaming, then group chat with @mentions and reply-depth rules
-4. **M4 — Bot memory:** memory files, read/append tools, memory viewer UI
+4. **M4 — Bot memory:** memory files, read/append tools, memory viewer UI, full skill registry (beyond the editor's built-in skill toggles)
 5. **M5 — Bot & thread storage:** UUID data folders, shared assets per chat
 6. **M6 — Bot-to-bot:** DMs, message bus, observation/mute controls
 7. **M7 — Cron:** job scheduler, chat-initiated jobs, initiator + target tracking
@@ -204,9 +204,10 @@ assets       (owner_uuid, path, uploaded_by, created_at)
 ## 8. Resolved Decisions
 
 - **Auth:** Lightweight multi-user with login from day one. Email + password (or passkey) sessions; bots and chats are per-user scoped.
-- **Providers:** Adapter-based, extensible. Z.AI is the first target provider; add OpenAI/Anthropic/Google/OpenRouter/Ollama as the build progresses.
+- **Providers:** Adapter-based, extensible. Z.AI is the first target provider; add OpenAI/Anthropic/Google/OpenRouter/Ollama as the build progresses. Z.AI is OpenAI-compatible, so it runs through TanStack AI's generic `openaiCompatible` adapter (base URL + key from `.env`; model catalog in `src/types/ai.ts`). No per-bot fallback model — one model per bot.
 - **Memory retrieval:** Full-file injection. Each bot's entire memory file is injected into context (watch token budgets; revisit chunked/embedding retrieval only if files outgrow context).
 - **Bot DM workspaces:** Each bot keeps its own workspace UUID — bots are separate "people." DM threads are just message traffic between two bot workspaces; no third workspace is created.
 - **Streaming:** Stream + durable everywhere (SSE/WebSocket for live delivery, persisted outbox so no message is lost on reconnect or crash). TanStack AI primitives handle the client contract.
+- **Deferred from M2 (by design):** workspace edit/update (create/read/delete/attach cover current needs); budgets land in M9; deeper skills management rides with M4. Bots have a single model — no per-bot fallback.
 
 **Database choice for durable streaming — recommendation: Postgres.** SQLite (WAL) can support the outbox pattern, but durable streaming across multi-user auth, bot DMs, and cron fan-out leans on features Postgres gives for free: `LISTEN/NOTIFY` for live fan-out, real transactional outbox, better write concurrency when multiple bots and jobs persist messages simultaneously, and mature queue extensions. With Drizzle ORM the schema is portable, but migrating SQLite→Postgres mid-build is real friction; paying the small ops cost of one Postgres container in the existing Docker Compose is the cheaper path. Switching the PRD stack: Bun + Drizzle + Postgres, everything else unchanged. (Flagging honestly: this is a judgment call based on standard patterns, not a benchmark — SQLite would likely still work fine at single-user-per-instance scale.)

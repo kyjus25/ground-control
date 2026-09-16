@@ -36,7 +36,7 @@ const COLOR_BG: Record<BotColor, string> = {
   stone: 'bg-stone-100',
 }
 
-export function Navigation() {
+export function Navigation(props: { onNavigate?: () => void } = {}) {
   const navigate = useNavigate()
   const params = useParams({ strict: false })
   const activeId = () => params().id
@@ -56,6 +56,7 @@ export function Navigation() {
       e.preventDefault()
       navigate({ to: '/' })
     }
+    props.onNavigate?.()
   }
 
   const openEditor = (bot: Bot | null) => {
@@ -87,7 +88,13 @@ export function Navigation() {
   return (
     <aside class="flex w-64 shrink-0 flex-col border-r border-stone-200 bg-stone-100">
       <div class="flex h-14 shrink-0 items-center gap-2 px-5">
-        <Link to="/" preload={false} class="flex cursor-pointer items-center gap-2 rounded-md" title="Dashboard">
+        <Link
+          to="/"
+          preload={false}
+          class="flex cursor-pointer items-center gap-2 rounded-md"
+          title="Dashboard"
+          onClick={() => props.onNavigate?.()}
+        >
           <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-stone-900">
             <SatelliteDish class="h-3.5 w-3.5 text-white" />
           </span>

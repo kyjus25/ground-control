@@ -16,6 +16,9 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@tanstack/ai": "^0.54.0",
+    "@tanstack/ai-openai": "^0.22.6",
+    "@tanstack/ai-solid": "^0.21.1",
     "@tanstack/solid-ai-devtools": "^0.2.71",
     "@tanstack/solid-devtools": "^0.8.12",
     "@tanstack/solid-form": "^1.33.5",

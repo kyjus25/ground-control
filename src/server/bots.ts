@@ -22,6 +22,8 @@ export const listBots = createServerFn({ method: 'GET' }).handler(async () => {
       shape: bots.shape,
       category: bots.category,
       modelId: bots.modelId,
+      soul: bots.soul,
+      instructions: bots.instructions,
       skills: bots.skills,
     })
     .from(bots)
@@ -55,6 +57,7 @@ export const createBot = createServerFn({ method: 'POST' })
         soul: data.soul?.trim() || null,
         instructions: data.instructions?.trim() || null,
         modelId: data.modelId?.trim() || null,
+        skills: data.skills ?? '[]',
       })
       .returning({ id: bots.id })
     return bot
@@ -75,6 +78,7 @@ export const updateBot = createServerFn({ method: 'POST' })
         soul: data.soul?.trim() || null,
         instructions: data.instructions?.trim() || null,
         modelId: data.modelId?.trim() || null,
+        skills: data.skills ?? '[]',
       })
       .where(and(eq(bots.id, data.id), eq(bots.userId, user.id)))
   })

@@ -26,6 +26,8 @@ export type Bot = {
   shape: BotShape
   category: string | null
   modelId: string | null
+  soul: string | null
+  instructions: string | null
   // JSON array of enabled skill names.
   skills: string
 }

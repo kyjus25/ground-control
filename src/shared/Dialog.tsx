@@ -34,7 +34,7 @@ export function Dialog(props: DialogProps) {
   return (
     <dialog
       ref={ref}
-      class={`m-auto w-full max-h-[85dvh] overflow-hidden rounded-2xl border border-stone-200 bg-white p-0 text-stone-900 shadow-xl backdrop:bg-stone-900/40 backdrop:backdrop-blur-sm transition-[opacity,scale] duration-200 open:starting:opacity-0 open:starting:scale-[.97] ${
+      class={`m-auto w-[calc(100vw-1.5rem)] max-h-[85dvh] overflow-hidden rounded-2xl border border-stone-200 bg-white p-0 text-stone-900 shadow-xl backdrop:bg-stone-900/40 backdrop:backdrop-blur-sm transition-[opacity,scale] duration-200 open:starting:opacity-0 open:starting:scale-[.97] ${
         props.class ?? ''
       }`}
       onClick={(e) => {

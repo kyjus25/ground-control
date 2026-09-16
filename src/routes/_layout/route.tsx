@@ -1,4 +1,7 @@
 import { Outlet, createFileRoute, redirect } from '@tanstack/solid-router'
+import { createSignal } from 'solid-js'
+import Menu from 'lucide-solid/icons/menu'
+import { Drawer } from '../../shared/Drawer'
 import { Navigation } from './-/Navigation'
 import { getSessionUser } from '../../server/auth'
 
@@ -15,10 +18,35 @@ export const Route = createFileRoute('/_layout')({
 })
 
 function Layout() {
+  const [navOpen, setNavOpen] = createSignal(false)
   return (
-    <div class="flex h-screen overflow-hidden">
-      <Navigation />
-      <Outlet />
+    <div class="flex h-dvh overflow-hidden">
+      {/* Mobile top bar (the nav itself becomes a drawer below md) */}
+      <div class="fixed inset-x-0 top-0 z-40 flex h-14 items-center gap-2 border-b border-stone-200 bg-stone-100 px-3 md:hidden">
+        <button
+          class="cursor-pointer rounded-lg p-2 text-stone-600 hover:bg-stone-200 hover:text-stone-900"
+          title="Menu"
+          onClick={() => setNavOpen(true)}
+        >
+          <Menu class="h-5 w-5" />
+        </button>
+        <span class="text-[15px] font-medium tracking-tight">Ground Control</span>
+      </div>
+
+      <div class="flex min-w-0 flex-1 pt-14 md:pt-0">
+        <Outlet />
+      </div>
+
+      {/* One Navigation instance: drawer below md, inline panel above. */}
+      <Drawer
+        side="left"
+        inlineAt="md"
+        open={navOpen()}
+        onClose={() => setNavOpen(false)}
+        class="w-64"
+      >
+        <Navigation onNavigate={() => setNavOpen(false)} />
+      </Drawer>
     </div>
   )
 }

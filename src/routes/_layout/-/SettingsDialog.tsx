@@ -128,8 +128,8 @@ export default function SettingsDialog(props: { onClose: () => void }) {
         </section>
 
         <p class="text-xs leading-relaxed text-stone-400">
-          Model assignments, budgets, and skills management land in M2. Everything here is a
-          placeholder for now.
+          Model assignment lives in each bot's editor. Budgets arrive in M9; deeper skills
+          management lands with bot memory (M4).
         </p>
 
         <div class="border-t border-stone-200 pt-4">

@@ -12,6 +12,8 @@ export const BotInputSchema = v.object({
   soul: v.optional(v.string()),
   instructions: v.optional(v.string()),
   modelId: v.optional(v.string()),
+  // JSON array of enabled skill names.
+  skills: v.optional(v.string()),
 })
 
 export const BotInputWithIdSchema = v.object({
