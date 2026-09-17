@@ -28,7 +28,7 @@ export function Dialog(props: DialogProps) {
   // Removing an open <dialog> from the DOM without close() corrupts the
   // top layer — every later showModal then renders without overlay/centering.
   onCleanup(() => {
-    if (ref.open) ref.close()
+    if (ref?.open) ref.close()
   })
 
   return (
@@ -39,6 +39,10 @@ export function Dialog(props: DialogProps) {
       }`}
       onClick={(e) => {
         if ((props.closeOnBackdrop ?? true) && e.target === ref) props.onClose()
+      }}
+      onCancel={(event) => {
+        event.preventDefault()
+        props.onClose()
       }}
       onClose={() => props.onClose()}
     >

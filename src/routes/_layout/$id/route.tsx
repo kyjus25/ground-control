@@ -8,6 +8,7 @@ import { Sidebar } from './-/Sidebar'
 import { BotThread } from './-/BotThread'
 import { GroupThread } from './-/GroupThread'
 import { Thread } from './-/Thread'
+import { ThreadStorageDialog, type StorageTab } from './-/ThreadStorageDialog'
 
 type HistoryRow = { senderType: 'user' | 'bot'; senderBotId: string | null; content: string }
 
@@ -38,6 +39,12 @@ function Workspace() {
   // The right rail is a slide-in drawer below lg, inline above. One Sidebar.
   const [railOpen, setRailOpen] = createSignal(false)
   const openRail = () => setRailOpen(true)
+  const [storageTab, setStorageTab] = createSignal<StorageTab | null>(null)
+  const storageThread = () => data().bot ?? data().group
+  const openStorage = (tab: StorageTab) => {
+    setRailOpen(false)
+    setStorageTab(tab)
+  }
   return (
     <>
       <Show
@@ -59,8 +66,13 @@ function Workspace() {
         onClose={() => setRailOpen(false)}
         class="w-72"
       >
-        <Sidebar />
+        <Sidebar onOpenStorage={storageThread() ? openStorage : undefined} />
       </Drawer>
+      <Show when={storageThread()?.id} keyed>
+        {(threadId) => <Show when={storageTab()}>
+          {(tab) => <ThreadStorageDialog threadId={threadId} name={storageThread()!.name} group={Boolean(data().group)} initialTab={tab()} onClose={() => setStorageTab(null)} />}
+        </Show>}
+      </Show>
     </>
   )
 }

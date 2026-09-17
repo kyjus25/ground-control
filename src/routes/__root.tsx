@@ -58,7 +58,9 @@ function RootComponent() {
 }
 
 // Lazily loaded: devtools code never ships in the initial page load.
-const Devtools = lazy(() => import('./-/Devtools'))
+const Devtools = import.meta.env.DEV && !import.meta.env.SSR
+  ? lazy(() => import('./-/Devtools'))
+  : () => null
 
 function RootDocument(props: { children: Solid.JSX.Element }) {
   return (

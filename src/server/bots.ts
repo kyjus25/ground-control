@@ -4,6 +4,7 @@ import { db } from './db'
 import { bots } from './db/schema'
 import { getSessionUser } from './auth'
 import { BotInputSchema, BotInputWithIdSchema } from '../types/bot-schemas'
+import { normalizeSkills } from '../types/skill'
 
 async function requireUser() {
   const user = await getSessionUser()
@@ -57,7 +58,7 @@ export const createBot = createServerFn({ method: 'POST' })
         soul: data.soul?.trim() || null,
         instructions: data.instructions?.trim() || null,
         modelId: data.modelId?.trim() || null,
-        skills: data.skills ?? '[]',
+        skills: JSON.stringify(normalizeSkills(data.skills)),
       })
       .returning({ id: bots.id })
     return bot
@@ -78,7 +79,7 @@ export const updateBot = createServerFn({ method: 'POST' })
         soul: data.soul?.trim() || null,
         instructions: data.instructions?.trim() || null,
         modelId: data.modelId?.trim() || null,
-        skills: data.skills ?? '[]',
+        skills: JSON.stringify(normalizeSkills(data.skills)),
       })
       .where(and(eq(bots.id, data.id), eq(bots.userId, user.id)))
   })

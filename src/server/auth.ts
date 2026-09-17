@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/solid-start'
 import { getCookie, setCookie, deleteCookie } from '@tanstack/solid-start/server'
 import { eq } from 'drizzle-orm'
+import { compare, hash } from 'bcryptjs'
 import { db } from './db'
 import { sessions, users } from './db/schema'
 import { SigninSchema, SignupSchema } from '../types/auth-schemas'
@@ -8,9 +9,7 @@ import { SigninSchema, SignupSchema } from '../types/auth-schemas'
 const SESSION_COOKIE = 'gc_session'
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
-// Bun.env is process.env (Bun also auto-loads .env); `Bun` requires the
-// server to run under Bun, which is the PRD runtime.
-const signupEnabled = () => Bun.env.ENABLE_SIGNUP === 'true'
+const signupEnabled = () => process.env.ENABLE_SIGNUP === 'true'
 
 const randomToken = () =>
   [...crypto.getRandomValues(new Uint8Array(32))]
@@ -46,10 +45,7 @@ export const signup = createServerFn({ method: 'POST' })
     const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email))
     if (existing.length > 0) throw new Error('An account with that email already exists')
 
-    const passwordHash = await Bun.password.hash(data.password, {
-      algorithm: 'bcrypt',
-      cost: 10,
-    })
+    const passwordHash = await hash(data.password, 10)
     const [user] = await db.insert(users).values({ email, passwordHash }).returning()
     await issueSession(user.id)
     return { id: user.id, email: user.email }
@@ -60,7 +56,7 @@ export const login = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const email = normalizeEmail(data.email)
     const [user] = await db.select().from(users).where(eq(users.email, email))
-    if (!user || !(await Bun.password.verify(data.password, user.passwordHash))) {
+    if (!user || !(await compare(data.password, user.passwordHash))) {
       throw new Error('Invalid email or password')
     }
     await issueSession(user.id)

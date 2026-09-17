@@ -140,6 +140,15 @@ export const runs = pgTable('runs', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+export const compactionMetadata = pgTable('compaction_metadata', {
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  threadId: uuid('thread_id').notNull(),
+  scope: text('scope').notNull(),
+  namespace: text('namespace').notNull(),
+  key: text('key').notNull(),
+  value: jsonb('value').notNull(),
+}, (t) => [primaryKey({ columns: [t.userId, t.threadId, t.scope, t.namespace, t.key] })])
+
 export const runEvents = pgTable(
   'run_events',
   {

@@ -75,6 +75,7 @@ export function systemPromptsFor(speaker: ChatBot, thread: ChatThread, roster: r
 
 export function contextFor(speakerBotId: string, history: readonly HistoryMessage[], senderNames: ReadonlyMap<string, string>): ModelMessage[] {
   return history.map((row) => {
+    if (row.senderType === 'summary') return { role: 'user', content: row.content }
     if (row.senderType === 'user') return { role: 'user', content: `User: ${row.content}` }
     if (row.senderBotId === speakerBotId) return { role: 'assistant', content: row.content }
     const name = row.senderBotId ? senderNames.get(row.senderBotId) ?? 'Unknown' : 'Unknown'
@@ -124,7 +125,7 @@ export async function runReplyChain(options: {
       : 'You are the first responder for this untagged message. You must provide a helpful, natural reply even without an @mention. Do not pass or remain silent.')
     const reply = (await options.generate(
       speaker,
-      contextFor(speaker.id, history, senderNames).slice(-50),
+      contextFor(speaker.id, history, senderNames),
       prompts,
       optional,
       buffer,
@@ -151,7 +152,7 @@ export function speakerMetadata(speaker: { id: string; name: string }) {
 
 export async function streamSpeakerReply(options: {
   speaker: ChatBot
-  source: AsyncIterable<StreamChunk>
+  source: AsyncIterable<StreamChunk> | (() => Promise<AsyncIterable<StreamChunk>>)
   emit: (chunks: StreamChunk[]) => Promise<unknown>
   persist: (message: { id: string; content: string }) => Promise<unknown>
   messageId?: () => string
@@ -177,50 +178,56 @@ export async function streamSpeakerReply(options: {
       { type: EventType.TEXT_MESSAGE_END, messageId: message.id },
     ])
   }
-  for await (const chunk of options.source) {
-    if (chunk.type === EventType.RUN_STARTED || chunk.type === EventType.RUN_FINISHED) continue
-    if (chunk.type === EventType.RUN_ERROR) throw new Error(chunk.message)
-    if (chunk.type === EventType.TEXT_MESSAGE_START || chunk.type === EventType.TEXT_MESSAGE_CONTENT || chunk.type === EventType.TEXT_MESSAGE_END) {
-      let message = texts.get(chunk.messageId)
-      if (!message) {
-        message = { id: options.messageId?.() ?? crypto.randomUUID(), content: '', done: false }
-        texts.set(chunk.messageId, message)
+  await options.emit([{ type: EventType.CUSTOM, name: 'speaker-start', value: { botId: options.speaker.id, ...metadata } }])
+  try {
+    const source = typeof options.source === 'function' ? await options.source() : options.source
+    for await (const chunk of source) {
+      if (chunk.type === EventType.RUN_STARTED || chunk.type === EventType.RUN_FINISHED) continue
+      if (chunk.type === EventType.RUN_ERROR) throw new Error(chunk.message)
+      if (chunk.type === EventType.TEXT_MESSAGE_START || chunk.type === EventType.TEXT_MESSAGE_CONTENT || chunk.type === EventType.TEXT_MESSAGE_END) {
+        let message = texts.get(chunk.messageId)
+        if (!message) {
+          message = { id: options.messageId?.() ?? crypto.randomUUID(), content: '', done: false }
+          texts.set(chunk.messageId, message)
+          if (!options.buffer) {
+            await options.emit([
+              {
+                type: EventType.CUSTOM,
+                name: 'speaker',
+                value: { messageId: message.id, botId: options.speaker.id, ...metadata },
+              },
+              {
+                type: EventType.TEXT_MESSAGE_START,
+                messageId: message.id,
+                role: 'assistant' as const,
+                name: options.speaker.name,
+                metadata,
+              },
+            ])
+          }
+        }
+        if (chunk.type === EventType.TEXT_MESSAGE_START) continue
+        if (chunk.type === EventType.TEXT_MESSAGE_CONTENT) message.content += chunk.delta
+        if (chunk.type === EventType.TEXT_MESSAGE_END) message.done = true
         if (!options.buffer) {
-          await options.emit([
-            {
-              type: EventType.CUSTOM,
-              name: 'speaker',
-              value: { messageId: message.id, botId: options.speaker.id, ...metadata },
-            },
-            {
-              type: EventType.TEXT_MESSAGE_START,
-              messageId: message.id,
-              role: 'assistant' as const,
-              name: options.speaker.name,
-              metadata,
-            },
-          ])
+          await options.emit([chunk.type === EventType.TEXT_MESSAGE_CONTENT
+            ? { type: EventType.TEXT_MESSAGE_CONTENT, messageId: message.id, delta: chunk.delta }
+            : { type: EventType.TEXT_MESSAGE_END, messageId: message.id }])
         }
       }
-      if (chunk.type === EventType.TEXT_MESSAGE_START) continue
-      if (chunk.type === EventType.TEXT_MESSAGE_CONTENT) message.content += chunk.delta
-      if (chunk.type === EventType.TEXT_MESSAGE_END) message.done = true
-      if (!options.buffer) {
-        await options.emit([{ ...chunk, messageId: message.id, metadata }])
+    }
+    for (const message of texts.values()) {
+      const content = message.content.replace(/\[\[PASS\]\]/gi, '').trim()
+      if (content) {
+        if (options.buffer) await announce({ id: message.id, content })
+        await options.persist({ id: message.id, content })
       }
-    } else {
-      await options.emit([chunk])
     }
+    return [...texts.values()]
+      .map((message) => message.content.replace(/\[\[PASS\]\]/gi, '').trim())
+      .filter(Boolean)
+      .join('\n\n')
+  } finally {
+    await options.emit([{ type: EventType.CUSTOM, name: 'speaker-end', value: { botId: options.speaker.id } }])
   }
-  for (const message of texts.values()) {
-    const content = message.content.replace(/\[\[PASS\]\]/gi, '').trim()
-    if (content) {
-      if (options.buffer) await announce({ id: message.id, content })
-      await options.persist({ id: message.id, content })
-    }
-  }
-  return [...texts.values()]
-    .map((message) => message.content.replace(/\[\[PASS\]\]/gi, '').trim())
-    .filter(Boolean)
-    .join('\n\n')
 }

@@ -213,6 +213,70 @@ describe('reply routing and streaming attribution', () => {
     expect(calls).toEqual(['scout'])
   })
 
+  test('tool payloads and private state never enter durable events, transcript or handoff context', async () => {
+    for (const buffer of [false, true]) {
+      const emitted: StreamChunk[] = []
+      const persisted: unknown[] = []
+      const result = await streamSpeakerReply({
+        speaker: ben,
+        buffer,
+        messageId: () => 'public-id',
+        source: (async function* (): AsyncIterable<StreamChunk> {
+          yield { type: EventType.TOOL_CALL_START, toolCallId: 'call', toolCallName: 'memory_read', parentMessageId: 'provider-message' }
+          yield { type: EventType.TOOL_CALL_ARGS, toolCallId: 'call', delta: '{"scope":"self"}' }
+          yield { type: EventType.TOOL_CALL_END, toolCallId: 'call' }
+          yield { type: EventType.TOOL_CALL_RESULT, toolCallId: 'call', messageId: 'result', role: 'tool', content: 'PRIVATE RESULT' }
+          yield { type: EventType.CUSTOM, name: 'private-debug', value: 'PRIVATE MEMORY' }
+          yield* modelStream('@Scout public request')
+        })(),
+        emit: async (chunks) => { emitted.push(...chunks) },
+        persist: async (message) => { persisted.push(message) },
+      })
+      expect(result).toBe('@Scout public request')
+      expect(persisted).toEqual([{ id: 'public-id', content: '@Scout public request' }])
+      expect(JSON.stringify(emitted)).not.toContain('PRIVATE')
+      expect(JSON.stringify(emitted)).not.toContain('provider-message')
+      expect(emitted.some((chunk) => chunk.type.startsWith('TOOL_'))).toBe(false)
+      expect(contextFor(scout.id, [{ senderType: 'bot', senderBotId: ben.id, content: result }], new Map([[ben.id, ben.name]]))).toEqual([
+        { role: 'user', content: 'Ben: @Scout public request' },
+      ])
+    }
+  })
+
+  test('speaker starts before buffered generation, including a silent pass', async () => {
+    for (const buffer of [false, true]) {
+      const emitted: StreamChunk[] = []
+      await streamSpeakerReply({
+        speaker: scout,
+        buffer,
+        source: (async function* () {
+          expect(emitted[0]).toEqual({ type: EventType.CUSTOM, name: 'speaker-start', value: { botId: scout.id, senderBotId: scout.id, name: scout.name } })
+          yield* modelStream(buffer ? '[[PASS]]' : 'Public reply')
+        })(),
+        emit: async (chunks) => { emitted.push(...chunks) },
+        persist: async () => {},
+      })
+      expect(emitted.at(-1)).toEqual({ type: EventType.CUSTOM, name: 'speaker-end', value: { botId: scout.id } })
+      if (buffer) expect(emitted.filter((chunk) => chunk.type.startsWith('TEXT_'))).toEqual([])
+    }
+  })
+
+  test('public text is rebuilt without provider raw payloads or custom previews', async () => {
+    const emitted: StreamChunk[] = []
+    await streamSpeakerReply({
+      speaker: ben,
+      source: (async function* (): AsyncIterable<StreamChunk> {
+        yield { type: EventType.CUSTOM, name: 'compaction:private', value: 'PRIVATE MEMORY' }
+        yield { type: EventType.TEXT_MESSAGE_CONTENT, messageId: 'provider', delta: 'Public reply', rawEvent: { toolResult: 'PRIVATE RESULT' } }
+        yield { type: EventType.TEXT_MESSAGE_END, messageId: 'provider', rawEvent: 'PRIVATE STATE' }
+      })(),
+      emit: async (chunks) => { emitted.push(...chunks) },
+      persist: async () => {},
+    })
+    expect(JSON.stringify(emitted)).not.toContain('PRIVATE')
+    expect(JSON.stringify(emitted)).not.toContain('provider')
+  })
+
   test('provider failure is propagated, not treated as a successful handoff', async () => {
     const emitted: StreamChunk[] = []
     const persisted: unknown[] = []

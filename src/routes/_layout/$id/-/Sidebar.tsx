@@ -10,7 +10,7 @@ import X from 'lucide-solid/icons/x'
 import { attachThreadWorkspace, detachThreadWorkspace, listThreadWorkspaces, listWorkspaces } from '../../../../server/workspaces'
 
 // Right rail on threads. Browser first, then Workspaces, Pinned, and Jobs.
-export function Sidebar() {
+export function Sidebar(props: { onOpenStorage?: (tab: 'memory' | 'skills') => void }) {
   const params = useParams({ strict: false })
   const threadId = () => params().id!
 
@@ -37,7 +37,17 @@ export function Sidebar() {
   }))
 
   return (
-    <aside class="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-stone-200 bg-stone-100">
+    <aside class="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-stone-200 bg-stone-100 [scrollbar-gutter:stable]">
+      <Show when={props.onOpenStorage}>
+        <section class="space-y-3 border-b border-stone-200 px-5 py-5">
+          <h3 class="text-[13px] font-medium">Memory & skills</h3>
+          <p class="text-xs leading-relaxed text-stone-600">Persistent memory and markdown instructions for this thread.</p>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="cursor-pointer rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs hover:bg-stone-200" onClick={() => props.onOpenStorage?.('memory')}>MEMORY.md</button>
+            <button type="button" class="cursor-pointer rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs hover:bg-stone-200" onClick={() => props.onOpenStorage?.('skills')}>Skill registry</button>
+          </div>
+        </section>
+      </Show>
       {/* Browser */}
       <div class="border-b border-stone-200 px-5 pt-6 pb-5">
         <div class="mb-3 flex items-center justify-between">

@@ -6,6 +6,7 @@
       "name": "ground-control",
       "dependencies": {
         "@tanstack/ai": "^0.54.0",
+        "@tanstack/ai-compaction": "^0.1.2",
         "@tanstack/ai-openai": "^0.22.6",
         "@tanstack/ai-solid": "^0.21.1",
         "@tanstack/solid-ai-devtools": "^0.2.71",
@@ -17,6 +18,7 @@
         "@tanstack/solid-router": "^1.170.34",
         "@tanstack/solid-router-devtools": "^1.167.2",
         "@tanstack/solid-start": "^1.168.52",
+        "bcryptjs": "^3.0.3",
         "drizzle-orm": "^0.45.2",
         "lucide-solid": "^1.46.0",
         "postgres": "^3.4.9",
@@ -290,6 +292,8 @@
 
     "@tanstack/ai-client": ["@tanstack/ai-client@0.31.1", "", { "dependencies": { "@tanstack/ai": "^0.54.0", "@tanstack/ai-event-client": "^0.11.3", "@tanstack/ai-utils": "^0.4.0" } }, "sha512-45JeYoVb53q4nD9Bk00mdQUGyYKiP9CrvKRRmXN460I1YHdxiSQRbiL5n4POLXUQUcCYFDL2bxSq5I84Eu6/cw=="],
 
+    "@tanstack/ai-compaction": ["@tanstack/ai-compaction@0.1.2", "", { "peerDependencies": { "@tanstack/ai": "^0.54.0" } }, "sha512-cDYyaLuWML4XhHt12GnfrZpItZWuOpNB7iTYZc8niyTJ/ilMn4CpLZlDbv/YZC5YZ4zOpdD7GXuP4CihD7X4gw=="],
+
     "@tanstack/ai-devtools-core": ["@tanstack/ai-devtools-core@0.5.13", "", { "dependencies": { "@tanstack/ai": "^0.54.0", "@tanstack/ai-event-client": "^0.11.3", "@tanstack/devtools-ui": "^0.5.1", "@tanstack/devtools-utils": "^0.7.0", "goober": "^2.1.18", "solid-js": "^1.9.10" } }, "sha512-ZnUFe/IREA+VsoQpJLThJzrcE9FmIhf37txO6lZyyI2yXzbEDkf3KCKsleI19lTyI+FFnHcD7YMU9tOM1pj6pA=="],
 
     "@tanstack/ai-event-client": ["@tanstack/ai-event-client@0.11.3", "", { "dependencies": { "@tanstack/devtools-event-client": "^0.4.1" } }, "sha512-K5Nw05TG2NPJNunV7LI/5m7S97XHHdxN7vwTYcbKbmA5txlToaiF4wCfYBT406m7BOeGlLHZJpr3m1M6Vaai4g=="],
@@ -457,6 +461,8 @@
     "bail": ["bail@2.0.2", "", {}, "sha512-0xO6mYd7JB2YesxDKplafRpsiOzPt9V02ddPCLbY1xYGPOX24NTyN50qnUxgCPcSoYMhKpAuBTjQoRZCAkUDRw=="],
 
     "baseline-browser-mapping": ["baseline-browser-mapping@2.11.23", "", { "bin": { "baseline-browser-mapping": "dist/cli.cjs" } }, "sha512-le521dGVfxM7yRX0EikCoSz+rOK+hHzdDt/E7mG1jOJB/6WAAUuwVroLwaB7ApaUsz5Q0kFlDXLSA9MheUIfRQ=="],
+
+    "bcryptjs": ["bcryptjs@3.0.3", "", { "bin": { "bcrypt": "bin/bcrypt" } }, "sha512-GlF5wPWnSa/X5LKM1o0wz0suXIINz1iHRLvTS+sLyi7XPbe5ycmYI3DlZqVGZZtDgl4DmasFg7gOB3JYbphV5g=="],
 
     "browserslist": ["browserslist@4.29.0", "", { "dependencies": { "baseline-browser-mapping": "^2.11.23", "caniuse-lite": "^1.0.30001810", "electron-to-chromium": "^1.5.427", "node-releases": "^2.0.55", "update-browserslist-db": "^1.3.3" }, "bin": { "browserslist": "cli.js" } }, "sha512-3GSvyjvDI4Dur1Meg2BekJquu5uF+9R9a1+5M1Mde192eZoXbeXjzgOsgqPS2V8D5wrrip0gR5Hf/GhWQ9ZzaA=="],
 

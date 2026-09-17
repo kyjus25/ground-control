@@ -1,0 +1,13 @@
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+.git
+node_modules
+.output
+.nitro
+.tanstack
+dist
+data
+.DS_Store
+*.local

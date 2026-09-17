@@ -1,29 +1,13 @@
 import { createServerFn } from '@tanstack/solid-start'
-import { openaiCompatible } from '@tanstack/ai-openai/compatible'
 import { chat } from '@tanstack/ai'
 import { and, eq } from 'drizzle-orm'
 import { db } from './db'
 import { bots } from './db/schema'
 import { getSessionUser } from './auth'
 import { systemPromptsFor } from './chat-helpers'
-import { DEFAULT_MODEL_ID, ZAI_MODELS, type ZaiModelId } from '../types/ai'
-
-// Z.AI speaks the OpenAI Chat Completions protocol, so TanStack AI's generic
-// compatible adapter covers it — only the base URL and key differ.
-const zai = openaiCompatible({
-  name: 'zai',
-  baseURL: process.env.ZAI_BASE_URL || 'https://api.z.ai/api/paas/v4',
-  apiKey: process.env.ZAI_API_KEY || '',
-  models: ZAI_MODELS.map((m) => m.id),
-})
-
-export function adapterFor(modelId: string) {
-  const known = ZAI_MODELS.some((m) => m.id === modelId)
-  if (!known) {
-    throw new Error(`Unknown model "${modelId}" — pick one in the bot editor`)
-  }
-  return zai(modelId as ZaiModelId)
-}
+import { DEFAULT_MODEL_ID, ZAI_MODELS } from '../types/ai'
+import { adapterFor } from './model-adapter'
+import { createSpeakerStorage } from './speaker-storage'
 
 export const aiStatus = createServerFn({ method: 'GET' }).handler(() => ({
   configured: Boolean(process.env.ZAI_API_KEY),
@@ -54,11 +38,13 @@ export const generateBotReply = createServerFn({ method: 'POST' })
       throw new Error('This bot has no model assigned — pick one in the bot editor')
     }
     const roster = await db.select().from(bots).where(eq(bots.userId, user.id))
+    const storage = await createSpeakerStorage({ userId: user.id, botId: bot.id, threadId: bot.id })
     const reply = await chat({
       adapter: adapterFor(bot.modelId),
       messages: data.messages,
-      systemPrompts: systemPromptsFor(bot, { name: bot.name, primaryBotId: bot.id, memberIds: [bot.id] }, roster),
-
+      systemPrompts: [...systemPromptsFor(bot, { name: bot.name, primaryBotId: bot.id, memberIds: [bot.id] }, roster), ...storage.systemPrompts],
+      tools: storage.tools,
+      agentLoopStrategy: storage.agentLoopStrategy,
       stream: false,
     })
     return { reply }

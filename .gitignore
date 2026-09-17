@@ -6,3 +6,4 @@ dist/
 routeTree.gen.ts
 *.local
 .DS_Store
+data/

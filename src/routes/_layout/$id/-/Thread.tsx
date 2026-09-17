@@ -1,10 +1,10 @@
-import { For, Show, createEffect, createSignal } from 'solid-js'
-import ArrowUp from 'lucide-solid/icons/arrow-up'
+import { For, Show } from 'solid-js'
 import Download from 'lucide-solid/icons/download'
 import PanelRight from 'lucide-solid/icons/panel-right'
-import Paperclip from 'lucide-solid/icons/paperclip'
 import Search from 'lucide-solid/icons/search'
-import { BotAvatar, COLOR_BG } from '../../../../shared/BotAvatar'
+import { BotAvatar } from '../../../../shared/BotAvatar'
+import { Composer } from './Composer'
+import type { ChatCommand } from './composer-model'
 import { formatTime } from '../../../../shared/format'
 import type { Bot } from '../../../../types/bot'
 import { MessageContent } from './MentionText'
@@ -28,33 +28,16 @@ type ThreadProps = {
   loading?: boolean
   speaker?: ThreadMember | null
   error?: string
+  notice?: string
+  busy?: boolean
+  onCommand?: (command: ChatCommand) => Promise<boolean>
   onSend?: (text: string) => void
   onOpenRail?: () => void
 }
 
 export function Thread(props: ThreadProps) {
-  let textareaRef: HTMLTextAreaElement | undefined
-  const [draft, setDraft] = createSignal('')
   const members = () => props.members ?? []
   const messages = () => (props.messages ?? []).filter((message) => message.role === 'user' || message.role === 'assistant')
-
-  createEffect(() => {
-    props.id
-    setDraft('')
-    textareaRef?.focus()
-  })
-
-  const send = () => {
-    const text = draft().trim()
-    if (!text || !props.onSend) return
-    setDraft('')
-    props.onSend(text)
-  }
-
-  const insertMention = (member: ThreadMember) => {
-    setDraft((value) => `${value}${value && !value.endsWith(' ') ? ' ' : ''}@${member.name} `)
-    textareaRef?.focus()
-  }
 
   return (
     <main class="flex min-w-0 flex-1 flex-col">
@@ -145,52 +128,21 @@ export function Thread(props: ThreadProps) {
 
       <div class="shrink-0 border-t border-stone-200 p-4">
         <Show when={props.error}>
-          <p class="mx-auto mb-2 max-w-3xl rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{props.error}</p>
+          <p role="alert" class="mx-auto mb-2 max-w-3xl rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-xs text-stone-700">{props.error}</p>
         </Show>
-        <form class="mx-auto w-full max-w-3xl" onSubmit={(event) => { event.preventDefault(); send() }}>
-          <Show when={props.group}>
-            <div class="mb-2 flex flex-wrap gap-1.5">
-              <For each={members()}>
-                {(member) => (
-                  <button
-                    type="button"
-                    class={`cursor-pointer rounded-full px-2 py-0.5 text-xs text-stone-600 hover:brightness-95 ${COLOR_BG[member.color]}`}
-                    onClick={() => insertMention(member)}
-                  >
-                    @{member.name}
-                  </button>
-                )}
-              </For>
-            </div>
-          </Show>
-          <div class="flex items-end gap-2">
-            <textarea
-              ref={textareaRef}
-              rows="1"
-              value={draft()}
-              onInput={(event) => setDraft(event.currentTarget.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
-                  event.preventDefault()
-                  send()
-                }
-              }}
-              placeholder={props.group ? 'Message the crew… type @ to mention a bot' : `Message ${props.title ?? 'a bot'}…`}
-              class="flex-1 resize-none bg-transparent py-2 text-sm text-stone-600 placeholder-stone-400 focus:outline-none"
-            />
-            <button type="button" class="cursor-pointer p-2 text-stone-400 hover:text-stone-900" title="Attach">
-              <Paperclip class="h-4 w-4" />
-            </button>
-            <button
-              type="submit"
-              disabled={!draft().trim() || !props.onSend}
-              class="cursor-pointer flex h-8 w-8 items-center justify-center rounded-full bg-stone-900 text-white hover:bg-stone-600 disabled:cursor-default disabled:opacity-40"
-              title="Send"
-            >
-              <ArrowUp class="h-4 w-4" />
-            </button>
-          </div>
-        </form>
+        <Show when={props.notice}>
+          <p role="status" class="mx-auto mb-2 max-w-3xl rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-xs text-stone-600">{props.notice}</p>
+        </Show>
+        <Composer
+          id={props.id}
+          title={props.title}
+          group={props.group}
+          members={members()}
+          mentionableBots={props.mentionableBots ?? members()}
+          busy={props.busy || props.loading}
+          onSend={props.onSend}
+          onCommand={props.onCommand}
+        />
       </div>
     </main>
   )

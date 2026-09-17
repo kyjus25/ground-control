@@ -1,8 +1,9 @@
 import { createSignal } from 'solid-js'
 import { useChat } from '@tanstack/ai-solid'
-import { fetchServerSentEvents } from '@tanstack/ai-client'
 import type { ChatMember, GroupChat } from '../../../../server/chats'
 import { Thread } from './Thread'
+import { createThreadCommands, createThreadConnection } from './thread-commands'
+import { replyingSpeaker } from './speaker-state'
 
 export function GroupThread(props: {
   chat: GroupChat
@@ -14,8 +15,9 @@ export function GroupThread(props: {
   const memberById = () => new Map(props.roster.map((member) => [member.id, member]))
   const memberByName = () => new Map(props.roster.map((member) => [member.name.toLowerCase(), member]))
 
+  const transport = createThreadConnection()
   const chat = useChat({
-    connection: fetchServerSentEvents('/api/chat'),
+    connection: transport.connection,
     threadId: props.chat.id,
     persistence: true,
     initialMessages: props.history.map((message, index) => ({
@@ -25,12 +27,9 @@ export function GroupThread(props: {
       metadata: { senderBotId: message.senderBotId },
       parts: [{ type: 'text' as const, content: message.content }],
     })),
-    onChunk: (chunk) => {
-      if (chunk.type === 'CUSTOM' && chunk.name === 'speaker') {
-        const value = chunk.value as { botId?: string; name?: string }
-        setSpeaker(memberById().get(value.botId ?? '') ?? memberByName().get((value.name ?? '').toLowerCase()) ?? null)
-      }
-    },
+    onChunk: (chunk) => setSpeaker((current) => replyingSpeaker(current, chunk, props.roster)),
+    onFinish: () => setSpeaker(null),
+    onError: () => setSpeaker(null),
   })
 
   const senderFor = (message: { role: string; name?: string; metadata?: Record<string, unknown> }): ChatMember | null => {
@@ -41,6 +40,14 @@ export function GroupThread(props: {
       ?? (typeof name === 'string' ? memberByName().get(name.toLowerCase()) : undefined)
       ?? null
   }
+
+  const commands = createThreadCommands({
+    threadId: props.chat.id,
+    isLoading: chat.isLoading,
+    clear: () => { transport.invalidate(); chat.clear() },
+    sendMessage: chat.sendMessage,
+    beforeSend: () => setSpeaker(null),
+  })
 
   return (
     <Thread
@@ -58,8 +65,11 @@ export function GroupThread(props: {
       }))}
       loading={chat.isLoading()}
       speaker={speaker()}
-      error={chat.error()?.message}
-      onSend={(text) => { void chat.sendMessage(text) }}
+      error={commands.error() || chat.error()?.message}
+      notice={commands.notice()}
+      busy={commands.busy()}
+      onSend={commands.send}
+      onCommand={commands.command}
       onOpenRail={props.onOpenRail}
     />
   )

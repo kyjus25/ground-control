@@ -1,8 +1,9 @@
 import { createSignal } from 'solid-js'
 import { useChat } from '@tanstack/ai-solid'
-import { fetchServerSentEvents } from '@tanstack/ai-client'
 import type { Bot } from '../../../../types/bot'
 import { Thread, type ThreadMember } from './Thread'
+import { createThreadCommands, createThreadConnection } from './thread-commands'
+import { replyingSpeaker } from './speaker-state'
 
 export function BotThread(props: {
   bot: Bot
@@ -15,8 +16,9 @@ export function BotThread(props: {
   const byName = (name: unknown) => typeof name === 'string'
     ? props.roster.find((bot) => bot.name.toLowerCase() === name.toLowerCase())
     : undefined
+  const transport = createThreadConnection()
   const chat = useChat({
-    connection: fetchServerSentEvents('/api/chat'),
+    connection: transport.connection,
     threadId: props.bot.id,
     persistence: true,
     forwardedProps: { botId: props.bot.id },
@@ -26,12 +28,17 @@ export function BotThread(props: {
       metadata: { senderBotId: message.senderBotId },
       parts: [{ type: 'text' as const, content: message.content }],
     })),
-    onChunk: (chunk) => {
-      if (chunk.type === 'CUSTOM' && chunk.name === 'speaker') {
-        const value = chunk.value as { botId?: string; name?: string }
-        setSpeaker(byId(value.botId) ?? byName(value.name) ?? null)
-      }
-    },
+    onChunk: (chunk) => setSpeaker((current) => replyingSpeaker(current, chunk, props.roster)),
+    onFinish: () => setSpeaker(null),
+    onError: () => setSpeaker(null),
+  })
+
+  const commands = createThreadCommands({
+    threadId: props.bot.id,
+    isLoading: chat.isLoading,
+    clear: () => { transport.invalidate(); chat.clear() },
+    sendMessage: chat.sendMessage,
+    beforeSend: () => setSpeaker(props.bot),
   })
 
   return (
@@ -51,8 +58,11 @@ export function BotThread(props: {
       }))}
       loading={chat.isLoading()}
       speaker={speaker()}
-      error={chat.error()?.message}
-      onSend={(text) => { setSpeaker(props.bot); void chat.sendMessage(text) }}
+      error={commands.error() || chat.error()?.message}
+      notice={commands.notice()}
+      busy={commands.busy()}
+      onSend={commands.send}
+      onCommand={commands.command}
       onOpenRail={props.onOpenRail}
     />
   )

@@ -1,18 +1,18 @@
 import { createFileRoute } from '@tanstack/solid-router'
-import {
-  chat,
-  resumeServerSentEventsResponse,
-  toServerSentEventsResponse,
-  EventType,
-  type StreamChunk,
-} from '@tanstack/ai'
+import { chat } from '@tanstack/ai'
 import { and, asc, desc, eq } from 'drizzle-orm'
 import { db } from '../../server/db'
-import { bots, chatMembers, groupChats, messages, runs } from '../../server/db/schema'
+import { bots, messages, runs } from '../../server/db/schema'
 import { getSessionUser } from '../../server/auth'
-import { adapterFor } from '../../server/ai'
+import { adapterFor } from '../../server/model-adapter'
 import { pgStream } from '../../server/durability'
-import { canResumeRun, COOLDOWN_MS, runReplyChain, streamSpeakerReply, type ChatThread } from '../../server/chat-helpers'
+import { durableChatResponse, produceChatRun } from '../../server/chat-stream'
+import { canResumeRun, COOLDOWN_MS, runReplyChain, streamSpeakerReply } from '../../server/chat-helpers'
+import { lockIdleThread, ownedThread, ThreadError } from '../../server/thread-guard'
+import { summarizeWith, threadHistory } from '../../server/chat-context'
+import { compactionMiddleware, compactionSettings } from '../../server/compaction'
+import { threadMetadata } from '../../server/compaction-store'
+import { createSpeakerStorage } from '../../server/speaker-storage'
 
 export const Route = createFileRoute('/api/chat')({
   server: {
@@ -37,41 +37,11 @@ export const Route = createFileRoute('/api/chat')({
           if (!canResumeRun(knownRun, userId, threadId)) {
             return new Response('Run not found', { status: 404 })
           }
-          return resumeServerSentEventsResponse({
-            adapter: pgStream({ runId, offset: lastDelivered ?? '-1' }),
-          })
+          return durableChatResponse(pgStream({ runId, offset: lastDelivered ?? '-1' }), request.signal)
         }
+        if (lastDelivered !== null) return new Response('Run not found', { status: 404 })
         if (!process.env.ZAI_API_KEY) {
           return new Response('ZAI_API_KEY is not set — add your key to .env.local', { status: 500 })
-        }
-
-        const roster = await db
-          .select({
-            id: bots.id,
-            userId: bots.userId,
-            name: bots.name,
-            modelId: bots.modelId,
-            soul: bots.soul,
-            instructions: bots.instructions,
-          })
-          .from(bots)
-          .where(eq(bots.userId, userId))
-        const bot = roster.find((entry) => entry.id === threadId)
-        let thread: ChatThread
-        if (bot) {
-          thread = { name: bot.name, primaryBotId: bot.id, memberIds: [bot.id] }
-        } else {
-          const [groupChat] = await db
-            .select({ id: groupChats.id, name: groupChats.name })
-            .from(groupChats)
-            .where(and(eq(groupChats.id, threadId), eq(groupChats.userId, userId)))
-          if (!groupChat) return new Response('Thread not found', { status: 404 })
-          const members = await db
-            .select({ id: bots.id })
-            .from(chatMembers)
-            .innerJoin(bots, eq(chatMembers.botId, bots.id))
-            .where(and(eq(chatMembers.chatId, groupChat.id), eq(bots.userId, userId)))
-          thread = { name: groupChat.name, memberIds: members.map((member) => member.id) }
         }
 
         const wireMessages: Array<{ role?: string; content?: unknown }> = Array.isArray(body?.messages)
@@ -81,99 +51,80 @@ export const Route = createFileRoute('/api/chat')({
         const newText = textOf(lastUser?.content)
         if (!newText.trim()) return new Response('No user message', { status: 400 })
 
-        // M3 loop guards (§3.5): one run at a time per thread, plus a
-        // per-thread cooldown between fresh user turns. Both fail closed.
-        const [activeRun] = await db
-          .select({ id: runs.id })
-          .from(runs)
-          .where(and(eq(runs.userId, userId), eq(runs.threadId, threadId), eq(runs.open, true)))
-          .limit(1)
-        if (activeRun) {
-          return Response.json({ error: 'A reply is already generating in this thread' }, { status: 409 })
-        }
-        const [lastUserMessage] = await db
-          .select({ createdAt: messages.createdAt })
-          .from(messages)
-          .where(and(eq(messages.userId, userId), eq(messages.threadId, threadId), eq(messages.senderType, 'user')))
-          .orderBy(desc(messages.createdAt))
-          .limit(1)
-        if (lastUserMessage && Date.now() - lastUserMessage.createdAt.getTime() < COOLDOWN_MS) {
-          const waitSeconds = Math.ceil((COOLDOWN_MS - (Date.now() - lastUserMessage.createdAt.getTime())) / 1000)
-          return Response.json(
-            { error: `Slow down — this thread is cooling down. Try again in ${waitSeconds}s.` },
-            { status: 429, headers: { 'Retry-After': String(waitSeconds) } },
-          )
-        }
-
-        const registered = await db.transaction(async (tx) => {
+        const registration = await db.transaction(async (tx) => {
+          const owned = await ownedThread(tx, userId, threadId)
+          await lockIdleThread(tx, userId, threadId)
+          const [lastUserMessage] = await tx.select({ createdAt: messages.createdAt }).from(messages)
+            .where(and(eq(messages.userId, userId), eq(messages.threadId, threadId), eq(messages.senderType, 'user')))
+            .orderBy(desc(messages.createdAt)).limit(1)
+          if (lastUserMessage && Date.now() - lastUserMessage.createdAt.getTime() < COOLDOWN_MS) {
+            throw new ThreadError('This thread is cooling down. Try again shortly.', 429)
+          }
           const inserted = await tx.insert(runs)
             .values({ id: runId, userId, threadId, open: true })
             .onConflictDoNothing()
             .returning({ id: runs.id })
-          if (!inserted.length) return false
+          if (!inserted.length) throw new ThreadError('Run already exists; retry to resume', 409)
           await tx.insert(messages).values({ userId, threadId, senderType: 'user', content: newText })
-          return true
+          return owned
+        }).catch((error: unknown) => {
+          if (error instanceof ThreadError) return Response.json({ error: error.message }, { status: error.status })
+          throw error
         })
-        if (!registered) return new Response('Run already exists; retry to resume', { status: 409 })
+        if (registration instanceof Response) return registration
+        const { roster, thread } = registration
 
-        const durability = pgStream({ runId, offset: lastDelivered })
-        void (async () => {
-          try {
-            const history = await db
-              .select({
-                senderType: messages.senderType,
-                senderBotId: messages.senderBotId,
-                content: messages.content,
-              })
-              .from(messages)
-              .where(and(eq(messages.userId, userId), eq(messages.threadId, threadId)))
-              .orderBy(asc(messages.createdAt))
-            await durability.append([{ type: EventType.RUN_STARTED, threadId, runId }])
+        const durability = pgStream({ runId, offset: '-1' })
+        void produceChatRun({
+          adapter: durability,
+          runId,
+          threadId,
+          report: (phase, error) => console.error('[chat] run failed:', runId, phase, error instanceof Error ? error.stack?.split('\n').filter((line) => /^\s+at /.test(line)).join('\n') : 'Unknown error'),
+          produce: async () => {
+            const { history } = await threadHistory(userId, threadId)
             await runReplyChain({
               userId,
               roster,
               thread,
               text: newText,
               history,
-              generate: (speaker, context, systemPrompts, _optional, buffer) => streamSpeakerReply({
-                speaker,
-                source: chat({
-                  adapter: adapterFor(speaker.modelId!),
-                  messages: context,
-                  systemPrompts,
-                  stream: true,
-                }),
-                emit: (chunks) => durability.append(chunks),
-                persist: (message) => db.insert(messages).values({
-                  id: message.id,
-                  userId,
-                  threadId,
-                  senderType: 'bot',
-                  senderBotId: speaker.id,
-                  content: message.content,
-                }),
-                buffer,
-              }),
+              generate: async (speaker, context, systemPrompts, _optional, buffer) => {
+                return streamSpeakerReply({
+                  speaker,
+                  source: async () => {
+                    const storage = await createSpeakerStorage({ userId, botId: speaker.id, threadId })
+                    return chat({
+                    adapter: adapterFor(speaker.modelId!),
+                    threadId,
+                    middleware: compactionMiddleware(
+                      compactionSettings(),
+                      threadMetadata(userId, threadId, speaker.id),
+                      summarizeWith(speaker.modelId!),
+                      true,
+                    ),
+                    messages: context,
+                    systemPrompts: [...systemPrompts, ...storage.systemPrompts],
+                    tools: storage.tools,
+                    agentLoopStrategy: storage.agentLoopStrategy,
+                    stream: true,
+                    })
+                  },
+                  emit: (chunks) => durability.append(chunks),
+                  persist: (message) => db.insert(messages).values({
+                    id: message.id,
+                    userId,
+                    threadId,
+                    senderType: 'bot',
+                    senderBotId: speaker.id,
+                    content: message.content,
+                  }),
+                  buffer,
+                })
+              },
             })
-            await durability.append([{ type: EventType.RUN_FINISHED, threadId, runId }])
-          } catch (err) {
-            console.error('[chat] run failed:', runId, err)
-            await durability.append([{
-              type: EventType.RUN_ERROR,
-              message: err instanceof Error ? err.message : 'Run failed',
-              code: 'run_failed',
-            }])
-          } finally {
-            await durability.close()
-          }
-        })()
-
-        async function* logTail(): AsyncIterable<StreamChunk> {
-          for await (const { chunk } of durability.read('-1', request.signal)) {
-            yield chunk
-          }
-        }
-        return toServerSentEventsResponse(logTail())
+          },
+        })
+        return durableChatResponse(durability, request.signal)
       },
 
       GET: async ({ request }) => {
@@ -189,7 +140,7 @@ export const Route = createFileRoute('/api/chat')({
             .where(and(eq(runs.id, runId), eq(runs.userId, userId)))
           if (!run) return new Response('Run not found', { status: 404 })
           const offset = url.searchParams.get('offset') ?? request.headers.get('Last-Event-ID') ?? '-1'
-          return resumeServerSentEventsResponse({ adapter: pgStream({ runId: run.id, offset }) })
+          return durableChatResponse(pgStream({ runId: run.id, offset }), request.signal)
         }
 
         const threadId = url.searchParams.get('threadId')

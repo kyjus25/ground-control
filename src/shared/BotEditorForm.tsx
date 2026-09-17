@@ -7,6 +7,7 @@ import { createBot, updateBot, deleteBot } from '../server/bots'
 import { BotInputWithIdSchema, BotInputSchema } from '../types/bot-schemas'
 import { DEFAULT_MODEL_ID, ZAI_MODELS } from '../types/ai'
 import type { Bot, BotColor, BotShape } from '../types/bot'
+import { SKILLS, normalizeSkills, type SkillId } from '../types/skill'
 
 const EMOJIS = [
   '🧭', '📚', '🔥', '🛠️', '🤖', '💡', '🌙',
@@ -53,8 +54,6 @@ const SOUL_PRESETS: Array<{ label: string; text: string }> = [
   { label: 'Caveman', text: 'Talk like a caveman. Short words. Big wisdom. Occasional grunt.' },
 ]
 
-const SKILL_OPTIONS = ['Web search', 'Browser', 'File access', 'Cron', 'Memory write']
-
 export default function BotEditorForm(props: {
   bot: Bot | null
   onDone: () => void
@@ -73,17 +72,11 @@ export default function BotEditorForm(props: {
   const [modelId, setModelId] = createSignal(props.bot?.modelId ?? DEFAULT_MODEL_ID)
   const [soul, setSoul] = createSignal(props.bot?.soul ?? '')
   const [instructions, setInstructions] = createSignal(props.bot?.instructions ?? '')
-  // New bots start with every skill enabled; existing bots show what's stored.
-  const initialSkills = () => {
-    if (!props.bot) return [...SKILL_OPTIONS]
-    try {
-      const stored: unknown = JSON.parse(props.bot.skills)
-      return Array.isArray(stored) ? (stored as string[]) : []
-    } catch {
-      return []
-    }
-  }
-  const [skills, setSkills] = createSignal<string[]>(initialSkills())
+  const [skills, setSkills] = createSignal<SkillId[]>(
+    props.bot
+      ? normalizeSkills(props.bot.skills).filter((id) => SKILLS.some((skill) => skill.id === id && skill.available))
+      : SKILLS.filter((skill) => skill.available).map((skill) => skill.id),
+  )
   const [tab, setTab] = createSignal<'identity' | 'avatar' | 'skills'>('identity')
 
   onMount(() => {
@@ -137,8 +130,10 @@ export default function BotEditorForm(props: {
     },
   }))
 
-  const toggleSkill = (skill: string) =>
+  const toggleSkill = (skill: SkillId) => {
+    if (skill === 'memory-read' || !SKILLS.some((entry) => entry.id === skill && entry.available)) return
     setSkills((prev) => (prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]))
+  }
 
   const submit = (e: SubmitEvent) => {
     e.preventDefault()
@@ -344,23 +339,32 @@ export default function BotEditorForm(props: {
 
       <Show when={tab() === 'skills'}>
         <div class="space-y-2">
-          <For each={SKILL_OPTIONS}>
-            {(skill) => (
-              <button
-                type="button"
-                class={`flex w-full cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-sm ${
-                  skills().includes(skill)
-                    ? 'border-stone-400 bg-stone-100 text-stone-900'
-                    : 'border-stone-200 bg-white text-stone-600 hover:bg-stone-50'
-                }`}
-                onClick={() => toggleSkill(skill)}
-              >
-                {skill}
-                <span
-                  class={`h-4 w-4 rounded-full ${skills().includes(skill) ? 'bg-green-500' : 'bg-stone-200'}`}
-                />
-              </button>
-            )}
+          <p class="text-xs text-stone-600">Tool permissions apply to this bot. Markdown skill files are managed in each thread's sidebar.</p>
+          <For each={SKILLS}>
+            {(skill) => {
+              const enabled = () => skill.available && (skill.id === 'memory-read' || skills().includes(skill.id))
+              return (
+                <button
+                  type="button"
+                  disabled={!skill.available || skill.id === 'memory-read'}
+                  aria-pressed={enabled()}
+                  class={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-sm disabled:cursor-default ${
+                    enabled()
+                      ? 'border-stone-400 bg-stone-100 text-stone-900'
+                      : 'border-stone-200 bg-white text-stone-600 enabled:hover:bg-stone-50'
+                  }`}
+                  onClick={() => toggleSkill(skill.id)}
+                >
+                  <span>
+                    <span class="block font-medium">{skill.name}</span>
+                    <span class="mt-1 block text-xs text-stone-600">{skill.description}</span>
+                  </span>
+                  <span class="shrink-0 text-xs text-stone-600">
+                    {!skill.available ? 'Unavailable' : skill.id === 'memory-read' ? 'Always on' : enabled() ? 'On' : 'Off'}
+                  </span>
+                </button>
+              )
+            }}
           </For>
         </div>
       </Show>
